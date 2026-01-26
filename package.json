@@ -1,0 +1,30 @@
+{
+  "name": "sueldos-organigrama",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Organigrama colaborativo para gestión de sueldos - Open Source",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/web",
+    "dev:landing": "npm run dev --workspace=apps/landing",
+    "build": "npm run build --workspace=apps/web",
+    "build:landing": "npm run build --workspace=apps/landing",
+    "server": "node apps/web/server/websocket-server.js"
+  },
+  "keywords": [
+    "organigrama",
+    "colaborativo",
+    "sueldos",
+    "salarios",
+    "react-flow",
+    "real-time"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tu-usuario/sueldos-organigrama"
+  }
+}
