@@ -1,0 +1,22 @@
+# Dockerfile para Website Landing (Next.js)
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache git libc6-compat
+
+# Copiar package.json primero para cachear dependencias
+COPY apps/website/package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar el código fuente
+COPY apps/website/ .
+
+# Exponer puerto de desarrollo
+EXPOSE 3000
+
+# Comando por defecto
+CMD ["npm", "run", "dev"]

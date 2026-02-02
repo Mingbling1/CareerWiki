@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// Better Auth Tables
+// ==========================================
+
+model User {
+  id            String    @id
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false) @map("email_verified")
+  image         String?
+  role          String    @default("user")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  sessions      Session[]
+  accounts      Account[]
+  salaries      Salary[]
+  comments      Comment[]
+  interviews    Interview[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  userId                String    @map("user_id")
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("verifications")
+}
+
+// ==========================================
+// App Models
+// ==========================================
+
+model Company {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?
+  industry    String?
+  size        String?
+  location    String?
+  website     String?
+  logoUrl     String?  @map("logo_url")
+  culture     String?
+  benefits    String[]
+  isVerified  Boolean  @default(false) @map("is_verified")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  departments Department[]
+  positions   Position[]
+  orgNodes    OrgNode[]
+  orgEdges    OrgEdge[]
+
+  @@map("companies")
+}
+
+model Department {
+  id          String   @id @default(uuid()) @db.Uuid
+  companyId   String   @map("company_id") @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  positions Position[]
+
+  @@map("departments")
+}
+
+model Position {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  departmentId String?  @map("department_id") @db.Uuid
+  title        String
+  description  String?
+  level        String?
+  requirements String[]
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  salaries   Salary[]
+  comments   Comment[]
+  interviews Interview[]
+  orgNodes   OrgNode[]
+
+  @@map("positions")
+}
+
+model OrgNode {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  positionId String?  @map("position_id") @db.Uuid
+  parentId   String?  @map("parent_id") @db.Uuid
+  nodeId     String   @map("node_id")
+  label      String
+  type       String   @default("default")
+  positionX  Float    @default(0) @map("position_x")
+  positionY  Float    @default(0) @map("position_y")
+  metadata   Json     @default("{}")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  position Position? @relation(fields: [positionId], references: [id], onDelete: SetNull)
+  parent   OrgNode?  @relation("NodeHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children OrgNode[] @relation("NodeHierarchy")
+
+  @@unique([companyId, nodeId])
+  @@map("org_nodes")
+}
+
+model OrgEdge {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String   @map("company_id") @db.Uuid
+  edgeId       String   @map("edge_id")
+  sourceNodeId String   @map("source_node_id")
+  targetNodeId String   @map("target_node_id")
+  type         String   @default("default")
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, edgeId])
+  @@map("org_edges")
+}
+
+model Salary {
+  id              String   @id @default(uuid()) @db.Uuid
+  positionId      String   @map("position_id") @db.Uuid
+  userId          String   @map("user_id")
+  amount          Decimal  @db.Decimal(12, 2)
+  currency        String   @default("MXN")
+  period          String   @default("monthly")
+  yearsExperience Int?     @map("years_experience")
+  isVerified      Boolean  @default(false) @map("is_verified")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("salaries")
+}
+
+model Comment {
+  id         String   @id @default(uuid()) @db.Uuid
+  positionId String   @map("position_id") @db.Uuid
+  userId     String   @map("user_id")
+  content    String
+  rating     Int?
+  pros       String?
+  cons       String?
+  isVerified Boolean  @default(false) @map("is_verified")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Interview {
+  id           String   @id @default(uuid()) @db.Uuid
+  positionId   String   @map("position_id") @db.Uuid
+  userId       String   @map("user_id")
+  process      String?
+  questions    String[]
+  difficulty   String?
+  duration     String?
+  result       String?
+  tips         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interviews")
+}

@@ -1,0 +1,25 @@
+# Dockerfile para API Backend (NestJS)
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache git openssl
+
+# Copiar package.json primero para cachear dependencias
+COPY apps/api/package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar el código fuente y prisma schema
+COPY apps/api/ .
+
+# Generar Prisma Client
+RUN npx prisma generate
+
+# Exponer puerto
+EXPOSE 4000
+
+# Comando por defecto
+CMD ["npm", "run", "dev"]
