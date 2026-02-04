@@ -54,17 +54,17 @@ services:
       - empliq-network
 
   # ==========================================
-  # App Web (React + Vite)
+  # Frontend App (React + Vite)
   # ==========================================
-  web:
+  frontend:
     build:
       context: ..
-      dockerfile: docker/Dockerfile.web
-    container_name: empliq-web
+      dockerfile: docker/Dockerfile.frontend
+    container_name: empliq-frontend
     ports:
       - "5173:5173"
     volumes:
-      - ../apps/web:/app
+      - ../apps/frontend:/app
       - /app/node_modules
     environment:
       - NODE_ENV=development

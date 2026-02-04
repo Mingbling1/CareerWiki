@@ -8,9 +8,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/web",
+    "dev": "npm run dev --workspace=apps/frontend",
     "dev:website": "npm run dev --workspace=apps/website",
-    "build": "npm run build --workspace=apps/web",
+    "build": "npm run build --workspace=apps/frontend",
     "build:website": "npm run build --workspace=apps/website",
     "docker:dev": "docker-compose -f docker/docker-compose.dev.yml up",
     "docker:build": "docker-compose -f docker/docker-compose.dev.yml build"

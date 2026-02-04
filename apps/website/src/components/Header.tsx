@@ -48,14 +48,14 @@ export function Header() {
   return (
     <header
       className={cn(
-        'sticky top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-xl border-b border-white/[0.06]',
+        'sticky top-0 left-0 right-0 z-50 transition-all duration-300 backdrop-blur-xl bg-white/80 border-b border-neutral-200',
       )}
     >
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <nav className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <EmpliqLogo className="h-[28px] w-auto text-white transition-transform group-hover:scale-105" />
+            <EmpliqLogo className="h-[32px] w-auto text-neutral-900 transition-transform group-hover:scale-105" />
           </Link>
 
           {/* Desktop navigation - centro */}
@@ -65,18 +65,18 @@ export function Header() {
                 <NavigationMenuItem>
                   <NavigationMenuTrigger>Recursos</NavigationMenuTrigger>
                   <NavigationMenuContent>
-                    <ul className="grid w-[400px] gap-1 p-2 md:w-[500px] md:grid-cols-2">
+                    <ul className="grid w-[400px] gap-1 p-2 md:w-[500px] md:grid-cols-2 bg-white">
                       {recursos.map((item) => (
                         <li key={item.title}>
                           <NavigationMenuLink asChild>
                             <Link
                               href={item.href}
-                              className="flex items-start gap-3 rounded-md p-3 hover:bg-white/5 transition-colors"
+                              className="flex items-start gap-3 rounded-md p-3 hover:bg-neutral-100 transition-colors"
                             >
-                              <item.icon className="w-5 h-5 text-white/60 mt-0.5" />
+                              <item.icon className="w-5 h-5 text-neutral-500 mt-0.5" />
                               <div className="flex flex-col gap-1">
-                                <div className="text-sm font-medium text-white">{item.title}</div>
-                                <div className="text-xs text-white/50 line-clamp-2">{item.description}</div>
+                                <div className="text-sm font-medium text-neutral-900">{item.title}</div>
+                                <div className="text-xs text-neutral-500 line-clamp-2">{item.description}</div>
                               </div>
                             </Link>
                           </NavigationMenuLink>
@@ -107,13 +107,13 @@ export function Header() {
           <div className="hidden md:flex items-center gap-2">
             <a
               href="http://localhost:5173/login"
-              className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
+              className="px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
             >
               Iniciar sesión
             </a>
             <a
               href="http://localhost:5173/login"
-              className="px-4 py-2.5 text-sm bg-white text-black rounded-full font-medium hover:bg-white/90 transition-all hover:scale-[1.02]"
+              className="px-4 py-2.5 text-sm bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02]"
             >
               Comenzar gratis
             </a>
@@ -121,7 +121,7 @@ export function Header() {
 
           {/* Mobile menu button */}
           <button
-            className="md:hidden p-2 text-white/70 hover:text-white rounded-lg hover:bg-white/[0.06] transition-colors"
+            className="md:hidden p-2 text-neutral-600 hover:text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
             <svg
@@ -156,28 +156,28 @@ export function Header() {
             mobileMenuOpen ? 'max-h-[400px] opacity-100' : 'max-h-0 opacity-0'
           )}
         >
-          <div className="py-4 space-y-1 border-t border-white/[0.06]">
+          <div className="py-4 space-y-1 border-t border-neutral-200">
             {recursos.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 px-4 py-3 text-white/60 hover:text-white hover:bg-white/[0.04] rounded-lg transition-colors"
+                className="flex items-center gap-3 px-4 py-3 text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <item.icon className="w-5 h-5" />
                 {item.title}
               </Link>
             ))}
-            <div className="pt-4 mt-4 border-t border-white/[0.06] space-y-2">
+            <div className="pt-4 mt-4 border-t border-neutral-200 space-y-2">
               <a
                 href="http://localhost:5173/login"
-                className="block px-4 py-3 text-white/60 hover:text-white rounded-lg transition-colors text-center"
+                className="block px-4 py-3 text-neutral-600 hover:text-neutral-900 rounded-lg transition-colors text-center"
               >
                 Iniciar sesión
               </a>
               <a
                 href="http://localhost:5173/login"
-                className="block px-4 py-3 bg-white text-black rounded-lg font-medium text-center hover:bg-white/90 transition-colors"
+                className="block px-4 py-3 bg-neutral-900 text-white rounded-lg font-medium text-center hover:bg-neutral-800 transition-colors"
               >
                 Comenzar gratis
               </a>

@@ -1,4 +1,7 @@
+'use client'
+
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 
 const useCases = [
   {
@@ -51,80 +54,116 @@ const useCases = [
   },
 ]
 
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.15,
+    },
+  },
+}
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.25, 0.1, 0.25, 1] as const,
+    },
+  },
+}
+
 export function UseCases() {
   return (
-    <section className="relative py-24 bg-black">
+    <section className="relative py-24 bg-white">
       {/* Grid background */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
-      
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
+
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         {/* Section header */}
-        <div className="text-center mb-16">
-          <p className="text-blue-400 font-medium mb-4 tracking-wider uppercase text-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <p className="text-blue-600 font-medium mb-4 tracking-wider uppercase text-sm">
             Casos de uso
           </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
             Usa Empliq para construir{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
               tu carrera.
             </span>
           </h2>
-          <p className="text-xl text-white/60 max-w-2xl mx-auto">
-            Desde explorar nuevas oportunidades hasta negociar tu salario, 
+          <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
+            Desde explorar nuevas oportunidades hasta negociar tu salario,
             tenemos las herramientas que necesitas.
           </p>
-        </div>
+        </motion.div>
 
         {/* Cards grid */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-50px" }}
+          className="grid md:grid-cols-2 gap-6"
+        >
           {useCases.map((useCase, i) => (
-            <Link
-              key={i}
-              href={useCase.href}
-              className="group relative bg-neutral-900/95 backdrop-blur-sm border border-white/10 rounded-2xl p-8 hover:bg-neutral-900 hover:border-white/20 transition-all duration-300"
-            >
-              {/* Gradient border effect on hover */}
-              <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${useCase.gradient} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
-              
-              <div className="relative">
-                {/* Icon - Glass/Platinum style */}
-                <div className="w-12 h-12 rounded-xl bg-white/[0.08] backdrop-blur-md border border-white/[0.12] flex items-center justify-center text-white/80 mb-6 shadow-[inset_0_1px_1px_rgba(255,255,255,0.1)]">
-                  {useCase.icon}
+            <motion.div key={i} variants={cardVariants}>
+              <Link
+                href={useCase.href}
+                className="group relative block bg-white backdrop-blur-sm border border-neutral-200 rounded-2xl p-8 hover:bg-neutral-50 hover:border-neutral-300 shadow-sm hover:shadow-lg transition-all duration-300"
+              >
+                {/* Gradient border effect on hover */}
+                <div className={`absolute inset-0 rounded-2xl bg-gradient-to-r ${useCase.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
+
+                <div className="relative">
+                  {/* Icon */}
+                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-600 mb-6 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors">
+                    {useCase.icon}
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="text-2xl font-semibold text-neutral-900 mb-3 group-hover:text-blue-600 transition-colors">
+                    {useCase.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="text-neutral-600 mb-6 leading-relaxed">
+                    {useCase.description}
+                  </p>
+
+                  {/* Features */}
+                  <ul className="space-y-2">
+                    {useCase.features.map((feature, j) => (
+                      <li key={j} className="flex items-center gap-2 text-neutral-500 text-sm">
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* Arrow */}
+                  <div className="mt-6 flex items-center gap-2 text-neutral-400 group-hover:text-blue-600 transition-colors">
+                    <span className="text-sm font-medium">Explorar</span>
+                    <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </div>
                 </div>
-
-                {/* Title */}
-                <h3 className="text-2xl font-semibold text-white mb-3 group-hover:text-white transition-colors">
-                  {useCase.title}
-                </h3>
-
-                {/* Description */}
-                <p className="text-white/60 mb-6 leading-relaxed">
-                  {useCase.description}
-                </p>
-
-                {/* Features */}
-                <ul className="space-y-2">
-                  {useCase.features.map((feature, j) => (
-                    <li key={j} className="flex items-center gap-2 text-white/50 text-sm">
-                      <svg className="w-4 h-4 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Arrow */}
-                <div className="mt-6 flex items-center gap-2 text-white/50 group-hover:text-white transition-colors">
-                  <span className="text-sm font-medium">Explorar</span>
-                  <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </div>
-              </div>
-            </Link>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   )

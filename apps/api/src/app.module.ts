@@ -7,6 +7,7 @@ import { CommentsModule } from './infrastructure/http/modules/comments.module';
 import { OrgNodesModule } from './infrastructure/http/modules/org-nodes.module';
 import { PrismaModule } from './infrastructure/persistence/prisma/prisma.module';
 import { AuthModule } from './infrastructure/auth/auth.module';
+import { StorageModule } from './infrastructure/storage';
 import { AppController } from './app.controller';
 
 @Module({
@@ -16,6 +17,7 @@ import { AppController } from './app.controller';
       envFilePath: '.env',
     }),
     PrismaModule,
+    StorageModule,
     AuthModule,
     CompaniesModule,
     PositionsModule,

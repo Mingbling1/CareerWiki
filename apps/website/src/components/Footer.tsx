@@ -74,26 +74,26 @@ const socialLinks = [
 
 export function Footer() {
   return (
-    <footer className="relative bg-[#0a0a0a] pt-24 pb-12">
+    <footer className="relative bg-neutral-50 pt-24 pb-12 border-t border-neutral-200">
       {/* Top gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Main CTA section - estilo Payload */}
+        {/* Main CTA section */}
         <div className="text-center mb-20">
-          <p className="text-white/40 text-sm font-medium tracking-wider mb-6">
+          <p className="text-neutral-400 text-sm font-medium tracking-wider mb-6">
             CONSTRUYAMOS JUNTOS
           </p>
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-8 leading-tight">
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-neutral-900 mb-8 leading-tight">
             La transparencia laboral<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
               empieza contigo.
             </span>
           </h2>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
               href="/registro"
-              className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-full font-medium hover:bg-white/90 transition-all hover:scale-[1.02]"
+              className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-full font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02]"
             >
               Comenzar gratis
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@ export function Footer() {
             </Link>
             <Link
               href="/contacto"
-              className="inline-flex items-center gap-2 border border-white/20 text-white px-6 py-3 rounded-full font-medium hover:bg-white/5 transition-colors"
+              className="inline-flex items-center gap-2 border border-neutral-300 text-neutral-700 px-6 py-3 rounded-full font-medium hover:bg-neutral-100 transition-colors"
             >
               Contactar
             </Link>
@@ -110,28 +110,33 @@ export function Footer() {
         </div>
 
         {/* Links section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-16 border-b border-white/[0.08]">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-16 border-b border-neutral-200">
           {/* Logo column */}
-          <div className="col-span-2 md:col-span-1">
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-6 group">
-              <EmpliqLogo className="h-[22px] w-auto text-white transition-transform group-hover:scale-105" />
+          <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
+            <Link href="/" className="inline-flex items-center gap-2.5 group">
+              <EmpliqLogo className="h-[22px] w-auto text-neutral-900 transition-transform group-hover:scale-105" />
             </Link>
-            <Link
-              href="https://github.com/empliq"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-              </svg>
-              Ver en GitHub
-            </Link>
+            <p className="text-neutral-500 text-sm leading-relaxed">
+              Transparencia laboral para todos.
+            </p>
+            <div className="flex items-center gap-3 mt-2">
+              <Link
+                href="https://github.com/empliq"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-neutral-500 hover:text-neutral-900 text-sm transition-colors"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+                </svg>
+                GitHub
+              </Link>
+            </div>
           </div>
 
           {/* Use Cases */}
           <div>
-            <h4 className="text-white/40 font-medium text-xs tracking-wider mb-4">
+            <h4 className="text-neutral-400 font-medium text-xs tracking-wider mb-4">
               {footerLinks.useCases.title}
             </h4>
             <ul className="space-y-3">
@@ -139,7 +144,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-white/70 hover:text-white text-sm transition-colors"
+                    className="text-neutral-600 hover:text-neutral-900 text-sm transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -150,7 +155,7 @@ export function Footer() {
 
           {/* Developers */}
           <div>
-            <h4 className="text-white/40 font-medium text-xs tracking-wider mb-4">
+            <h4 className="text-neutral-400 font-medium text-xs tracking-wider mb-4">
               {footerLinks.developers.title}
             </h4>
             <ul className="space-y-3">
@@ -158,7 +163,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-white/70 hover:text-white text-sm transition-colors"
+                    className="text-neutral-600 hover:text-neutral-900 text-sm transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -169,7 +174,7 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="text-white/40 font-medium text-xs tracking-wider mb-4">
+            <h4 className="text-neutral-400 font-medium text-xs tracking-wider mb-4">
               {footerLinks.company.title}
             </h4>
             <ul className="space-y-3">
@@ -177,7 +182,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-white/70 hover:text-white text-sm transition-colors"
+                    className="text-neutral-600 hover:text-neutral-900 text-sm transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -191,14 +196,14 @@ export function Footer() {
         <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-6">
           {/* Newsletter */}
           <div className="flex items-center gap-3 w-full md:w-auto">
-            <span className="text-white/40 text-sm whitespace-nowrap">Suscríbete al newsletter</span>
-            <div className="flex items-center bg-white/[0.03] border border-white/[0.08] rounded-full overflow-hidden flex-1 md:flex-none">
+            <span className="text-neutral-500 text-sm whitespace-nowrap">Suscríbete al newsletter</span>
+            <div className="flex items-center bg-white border border-neutral-200 rounded-full overflow-hidden flex-1 md:flex-none shadow-sm">
               <input
                 type="email"
                 placeholder="tu@email.com"
-                className="bg-transparent px-4 py-2 text-sm text-white placeholder:text-white/30 focus:outline-none w-full md:w-48"
+                className="bg-transparent px-4 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none w-full md:w-48"
               />
-              <button className="bg-white text-black px-4 py-2 text-sm font-medium hover:bg-white/90 transition-colors">
+              <button className="bg-neutral-900 text-white px-4 py-2 text-sm font-medium hover:bg-neutral-800 transition-colors">
                 →
               </button>
             </div>
@@ -212,7 +217,7 @@ export function Footer() {
                 href={social.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-white/30 hover:text-white transition-colors"
+                className="text-neutral-400 hover:text-neutral-900 transition-colors"
                 aria-label={social.label}
               >
                 {social.icon}
@@ -222,8 +227,8 @@ export function Footer() {
         </div>
 
         {/* Copyright */}
-        <div className="mt-8 pt-8 border-t border-white/[0.04] text-center">
-          <p className="text-white/30 text-sm">
+        <div className="mt-8 pt-8 border-t border-neutral-200 text-center">
+          <p className="text-neutral-500 text-sm">
             © {new Date().getFullYear()} Empliq. Open source bajo licencia MIT.
           </p>
         </div>

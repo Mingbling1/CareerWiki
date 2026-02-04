@@ -47,6 +47,7 @@ export class CompanyRepositoryImpl implements ICompanyRepository {
       where: { id },
       data: {
         name: data.name,
+        slug: data.slug,
         description: data.description,
         industry: data.industry,
         size: data.size,

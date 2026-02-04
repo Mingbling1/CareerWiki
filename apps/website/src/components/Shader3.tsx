@@ -178,9 +178,9 @@ const Shader3 = ({
 
     vec3 gradient(float d){
         float a = smoothstep(0.0, 1.0, d);
-        vec3 colA = mix(vec3(0.05,0.05,0.05),vec3(.4,.6,.6),smoothstep(0.05,0.05,0.05) * d);
-        vec3 colB = mix(u_color * 0.06, u_color * 0.9, a);
-        return mix(colA, colB, d);
+        vec3 colA = mix(vec3(0.98,0.98,0.99),vec3(.95,.97,.99),smoothstep(0.05,0.05,0.05) * d);
+        vec3 colB = mix(u_color * 0.15, u_color * 0.5, a);
+        return mix(colA, colB, d * 0.7);
     }
 
     vec3 coloredRim(vec2 pos, float lamVal) {

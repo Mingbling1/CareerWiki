@@ -6,3 +6,5 @@ export * from './add-salary.use-case';
 export * from './get-comments.use-case';
 export * from './add-comment.use-case';
 export * from './get-organigrama.use-case';
+export * from './create-company.use-case';
+export * from './update-company.use-case';
