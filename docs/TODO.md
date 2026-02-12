@@ -13,6 +13,7 @@
 | 🔐 Autenticación | 🟢 Completado | 100% |
 | 🌐 Website (Landing) | 🟢 Completado | 100% |
 | 📦 Storage (Oracle) | 🟢 Completado | 100% |
+| 🔍 Scraper Websites | � Completado | 95% |
 
 ---
 
@@ -187,9 +188,13 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 ### Tablas
 - [x] `companies`
 - [x] `positions`
+- [x] `departments`
 - [x] `org_nodes`
+- [x] `org_edges`
 - [x] `salaries`
 - [x] `comments`
+- [x] `interviews`
+- [x] `documents`
 - [x] `users` (Better Auth)
 - [x] `sessions` (Better Auth)
 - [x] `accounts` (Better Auth)
@@ -197,20 +202,94 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 ### Migraciones
 - [x] Schema inicial (Prisma)
 - [x] Script SQL de inicialización
+- [x] Modelo Document en Prisma
+- [x] Modelo Interview en Prisma
+- [x] Moneda por defecto PEN (Perú)
 - [ ] Seed de datos de prueba
 
 ---
 
-## 🐳 DevOps
+## � Módulo: Scraper de Websites
+
+### Herramientas
+- [x] `google-search.js` - Scraper rápido con Puppeteer (DuckDuckGo + Bing)
+- [x] `firefox-scraper.js` - Scraper lento con Playwright + Firefox real
+  - [x] Rotación multi-motor (DuckDuckGo → Bing → Google)
+  - [x] Comportamiento humano (typing lento, mouse moves, scrolls)
+  - [x] Anti-ban (pausas largas, rotación de engines)
+  - [x] Query optimizada con nombre comercial limpio
+  - [x] Batch processing con progreso resumible
+- [x] `orchestrator.js` - Orquestador de scraping por tiers
+  - [x] Procesa Tier 1 → 2 → 3 automáticamente
+  - [x] Guarda progreso (resume si se interrumpe)
+  - [x] Compatible con PM2 para ejecución larga
+
+### Datos
+- [x] Tier 1: 915 empresas (≥1000 trabajadores)
+- [x] Tier 2: 798 empresas (500-999 trabajadores)
+- [x] Tier 3: 4,410 empresas (100-499 trabajadores)
+- [ ] Ejecutar scraping completo Tier 1
+- [ ] Ejecutar scraping completo Tier 2
+- [ ] Ejecutar scraping completo Tier 3
+- [ ] Importar resultados a PostgreSQL
+
+### Microservicio `api-scraper` (NestJS)
+- [x] Arquitectura hexagonal (domain/application/infrastructure)
+- [x] Puerto `SearchEnginePort` con 3 adaptadores
+- [x] Adaptador DDG HTTP (rápido, sin browser)
+- [x] Adaptador Puppeteer (Chromium + DDG/Bing)
+- [x] Adaptador Playwright (Firefox multi-motor)
+- [x] Orquestador inteligente con fallback automático
+- [x] DTOs con `class-validator` (equivalente a Pydantic)
+- [x] Swagger API docs en `/docs`
+- [x] Rate limit tracking por estrategia
+- [x] Cooldown automático tras 3 errores consecutivos
+- [x] Endpoint `/search/status` para n8n
+- [x] Batch endpoint (hasta 50 empresas)
+- [x] Dockerfile
+- [x] CI/CD (GitHub Actions → Oracle Cloud)
+- [x] Deploy script con Traefik labels
+- [x] Integrado en oracle-dokploy deploy-https.sh
+- [ ] Integración con n8n workflow
+- [ ] Persistencia de resultados en PostgreSQL
+
+### Orquestación
+> n8n consume `api-scraper` via HTTP. El microservicio expone
+> el estado de cada estrategia para que n8n decida cuándo cambiar.
+
+```bash
+# Microservicio (recomendado)
+cd apps/api-scraper && npm run dev
+# → http://localhost:3457/docs (Swagger)
+# → http://localhost:3457/search?q=INTERBANK
+
+# Scripts standalone (alternativa)
+node orchestrator.js --status
+npx pm2 start orchestrator.js --name scraper -- --headless
+```
+
+---
+
+## �🐳 DevOps
 
 ### Docker
 - [x] Dockerfile API
 - [x] Dockerfile Frontend
 - [x] Dockerfile Website
+- [x] Dockerfile Scraper (multi-stage, ARM64)
 - [x] docker-compose.dev.yml
 - [x] Hot reload configurado
 - [ ] docker-compose.prod.yml
-- [ ] CI/CD pipeline
+
+### CI/CD
+- [x] oracle-dokploy: deploy-https.sh con todos los servicios
+- [x] oracle-dokploy: GitHub Actions workflow
+- [x] empliq-scraper-api: deploy.sh standalone
+- [x] empliq-scraper-api: GitHub Actions CI/CD
+- [x] Scraper integrado en oracle-dokploy deploy-https.sh
+- [x] API Key auth para scraper (x-api-key header)
+- [x] Traefik labels para scraper.musuq.me
+- [ ] Configurar secrets en GitHub (SCRAPER_API_KEY)
 
 ---
 
@@ -249,4 +328,4 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 
 ---
 
-*Última actualización: 3 de febrero de 2026*
+*Última actualización: 10 de febrero de 2026*

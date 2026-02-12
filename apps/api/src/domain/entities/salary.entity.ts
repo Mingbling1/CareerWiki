@@ -21,7 +21,7 @@ export class Salary {
       props.positionId || '',
       props.userId || '',
       props.amount || 0,
-      props.currency || 'MXN',
+      props.currency || 'PEN',
       props.period || 'monthly',
       props.yearsExperience || null,
       props.isVerified || false,

@@ -10,6 +10,7 @@
 4. [Funcionalidades del MVP](#funcionalidades-del-mvp)
 5. [Modelo de Datos](#modelo-de-datos)
 6. [Flujos de Usuario](#flujos-de-usuario)
+7. [Pipeline de Datos](#pipeline-de-datos)
 
 ---
 
@@ -242,10 +243,11 @@ Perfil de empresa
 | Capa | Tecnología |
 |------|------------|
 | **Frontend** | React + Vite + TailwindCSS |
-| **Auth** | Supabase Auth (Google, LinkedIn) |
+| **Auth** | Better Auth (Google, LinkedIn) |
 | **Backend** | NestJS (Arquitectura Hexagonal) |
-| **Database** | PostgreSQL (via Supabase) |
+| **Database** | PostgreSQL |
 | **Organigrama** | ReactFlow |
+| **Automatización** | n8n |
 
 ### Principios
 
@@ -254,6 +256,94 @@ Perfil de empresa
 3. **Datos agregados** - Mostramos medias, no datos individuales
 4. **Mobile-first** - Diseño responsive
 5. **Performance** - Lazy loading, caching
+
+---
+
+## Pipeline de Datos
+
+### Fuente de Datos
+- **Padrón RUC SUNAT** (Perú): 13M+ registros
+- Filtrado: 872K personas jurídicas
+- Prioridad (Pareto): 6,123 empresas (≥100 trabajadores)
+
+### Segmentación
+
+| Tier | Criterio | Empresas |
+|------|----------|----------|
+| **Tier 1** | ≥1000 trabajadores | 915 |
+| **Tier 2** | 500-999 trabajadores | 798 |
+| **Tier 3** | 100-499 trabajadores | 4,410 |
+
+### Automatización
+
+#### Microservicio Scraper (`empliq-scraper-api`)
+
+NestJS microservice standalone en `https://github.com/Mingbling1/empliq-scraper-api`.
+Arquitectura hexagonal con 3 estrategias de búsqueda. Desplegado en Oracle Cloud vía CI/CD.
+
+**Endpoints:**
+| Método | Path | Descripción |
+|--------|------|-------------|
+| `GET` | `/search?q=EMPRESA` | Buscar web oficial (auto o strategy forzada) |
+| `POST` | `/search/batch` | Búsqueda por lote (hasta 50) |
+| `GET` | `/search/status` | Estado de todas las estrategias |
+| `POST` | `/search/reset` | Resetear contadores |
+| `GET` | `/search/health` | Healthcheck para n8n |
+
+**Estrategias (prioridad automática):**
+1. `ddg_http` — HTTP puro a DuckDuckGo (~1-2s, 200/sesión)
+2. `puppeteer` — Chromium + DDG/Bing (~5-10s, 80/sesión)
+3. `playwright` — Firefox multi-motor, humano (~15-30s, 50/sesión)
+
+**Para n8n:**
+```
+GET http://localhost:3457/search?q={{$json.company_name}}
+→ { found, website, score, strategies[].remainingCapacity }
+```
+
+#### Scraping de Websites (Playwright + Firefox)
+
+> **¿Por qué no n8n?** n8n corre como servicio web (container/server) sin display gráfico,
+> por lo que no puede controlar navegadores reales. Necesitamos Firefox real para evitar
+> detección de bots por los buscadores.
+
+**Solución: `orchestrator.js` + PM2**
+
+```
+orchestrator.js
+    │
+    ├─► firefox-scraper.js (Playwright + Firefox real)
+    │       │
+    │       ├─► DuckDuckGo (40 búsquedas/sesión)
+    │       ├─► Bing (40 búsquedas/sesión)
+    │       └─► Google (15 búsquedas/sesión, más estricto)
+    │
+    ├─► Rotación automática de motores
+    ├─► Delays humanos (15-30s entre búsquedas)
+    ├─► Pausas largas cada 15 empresas (2-3 min)
+    └─► Progreso guardado en CSV (resumible)
+```
+
+**Ejecución:**
+```bash
+# Ver estado
+node orchestrator.js --status
+
+# Ejecutar con PM2 (recomendado)
+npx pm2 start orchestrator.js --name scraper -- --headless
+npx pm2 logs scraper
+```
+
+**Estrategia de Query:**
+```
+"<nombre comercial limpio>" peru sitio web oficial -site:linkedin.com -site:facebook.com
+```
+- Se limpia el nombre: quita SAC, SA, SRL, EIRL, etc.
+- Se usan comillas para búsqueda exacta
+- Se excluyen redes sociales con `-site:`
+- Se puntúan resultados por TLD peruano (.pe, .com.pe) y coincidencia de nombre
+
+Ver documentación completa: [DATA_PIPELINE.md](./DATA_PIPELINE.md)
 
 ---
 

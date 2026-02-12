@@ -1,0 +1,27 @@
+FROM node:20-slim
+
+# Playwright y Puppeteer necesitan estas deps para browsers
+RUN apt-get update && apt-get install -y \
+  libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 \
+  libcups2 libdrm2 libdbus-1-3 libxkbcommon0 \
+  libxcomposite1 libxdamage1 libxrandr2 libgbm1 \
+  libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
+  libx11-xcb1 fonts-noto-core wget ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY apps/api-scraper/package*.json ./
+RUN npm ci --omit=dev
+
+# Instalar browsers para Playwright y Puppeteer
+RUN npx playwright install firefox --with-deps 2>/dev/null || true
+RUN npx puppeteer browsers install chrome 2>/dev/null || true
+
+COPY apps/api-scraper/ ./
+
+RUN npm run build
+
+EXPOSE 3457
+
+CMD ["node", "dist/main.js"]

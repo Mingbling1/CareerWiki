@@ -26,6 +26,7 @@ model User {
   salaries      Salary[]
   comments      Comment[]
   interviews    Interview[]
+  documents     Document[]
 
   @@map("users")
 }
@@ -82,6 +83,7 @@ model Verification {
 
 model Company {
   id          String   @id @default(uuid()) @db.Uuid
+  ruc         String?  @unique @db.VarChar(11)  // RUC de SUNAT
   name        String
   slug        String   @unique
   description String?
@@ -92,7 +94,9 @@ model Company {
   logoUrl     String?  @map("logo_url")
   culture     String?
   benefits    String[]
+  foundedYear Int?     @map("founded_year")
   isVerified  Boolean  @default(false) @map("is_verified")
+  metadata    Json     @default("{}")  // Datos adicionales: socialLinks, nroTrabajadores, etc.
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
@@ -101,6 +105,7 @@ model Company {
   orgNodes    OrgNode[]
   orgEdges    OrgEdge[]
 
+  @@index([ruc])
   @@map("companies")
 }
 
@@ -134,6 +139,7 @@ model Position {
   salaries   Salary[]
   comments   Comment[]
   interviews Interview[]
+  documents  Document[]
   orgNodes   OrgNode[]
 
   @@map("positions")
@@ -183,7 +189,7 @@ model Salary {
   positionId      String   @map("position_id") @db.Uuid
   userId          String   @map("user_id")
   amount          Decimal  @db.Decimal(12, 2)
-  currency        String   @default("MXN")
+  currency        String   @default("PEN")
   period          String   @default("monthly")
   yearsExperience Int?     @map("years_experience")
   isVerified      Boolean  @default(false) @map("is_verified")
@@ -228,4 +234,22 @@ model Interview {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("interviews")
+}
+
+model Document {
+  id          String   @id @default(uuid()) @db.Uuid
+  positionId  String   @map("position_id") @db.Uuid
+  userId      String   @map("user_id")
+  title       String
+  description String?
+  url         String
+  type        String?   // 'pdf', 'link', 'video', 'image'
+  category    String?   // 'interview-prep', 'job-description', 'study-material'
+  isVerified  Boolean  @default(false) @map("is_verified")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  position Position @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
 }

@@ -95,6 +95,29 @@ services:
     networks:
       - empliq-network
 
+  # ==========================================
+  # Scraper API Microservice (NestJS)
+  # ==========================================
+  api-scraper:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api-scraper
+    container_name: empliq-api-scraper
+    ports:
+      - "3457:3457"
+    volumes:
+      - ../apps/api-scraper:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - SCRAPER_PORT=3457
+      - DDG_HTTP_MAX=200
+      - PUPPETEER_MAX=80
+      - PLAYWRIGHT_MAX=50
+    command: npm run dev
+    networks:
+      - empliq-network
+
 networks:
   empliq-network:
     driver: bridge
