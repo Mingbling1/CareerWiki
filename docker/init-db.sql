@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS verifications (
 -- ============================================
 CREATE TABLE IF NOT EXISTS companies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    ruc VARCHAR(11) UNIQUE,
     name TEXT NOT NULL,
     slug TEXT NOT NULL UNIQUE,
     description TEXT,
@@ -76,10 +77,14 @@ CREATE TABLE IF NOT EXISTS companies (
     logo_url TEXT,
     culture TEXT,
     benefits TEXT[],
+    founded_year INT,
     is_verified BOOLEAN DEFAULT FALSE,
+    metadata JSONB DEFAULT '{}',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_companies_ruc ON companies(ruc);
 
 CREATE INDEX IF NOT EXISTS idx_companies_slug ON companies(slug);
 CREATE INDEX IF NOT EXISTS idx_companies_industry ON companies(industry);

@@ -23,8 +23,11 @@ Cada perfil de empresa tiene **3 secciones principales**:
 - Tamaño (rango de empleados)
 - Ubicación(es)
 - Website oficial
+- Logo (extraído automáticamente por el scraper: SVG, PNG, JPG)
+- RUC
 - Cultura organizacional
 - Beneficios generales
+- Año de fundación
 
 #### 2. 🏗️ Organigrama
 - Visualización interactiva con **ReactFlow**
@@ -51,9 +54,10 @@ Cada puesto dentro del organigrama tiene:
 | **Frontend** | React + Vite + TailwindCSS + shadcn/ui |
 | **Auth** | Better Auth (Google OAuth) |
 | **Backend** | NestJS (Arquitectura Hexagonal) |
-| **Base de datos** | PostgreSQL (pgvector) |
+| **Base de datos** | PostgreSQL + Prisma ORM |
 | **Organigrama** | ReactFlow |
 | **Scraper** | NestJS microservice (HTTP puro, sin browser) |
+| **Logo scraper** | Cheerio (extrae logo de JSON-LD, og:image, `<img>`, favicon) |
 | **Automatización** | n8n |
 | **Infra** | Oracle Cloud ARM + Docker + Traefik |
 
@@ -63,6 +67,32 @@ Cada puesto dentro del organigrama tiene:
 3. **Datos agregados** — medias y rangos, no datos individuales
 4. **Mobile-first** — diseño responsive
 5. **Simple** — MVP sin features innecesarios
+
+### Base de Datos (PostgreSQL + Prisma)
+
+Modelos principales del MVP:
+
+```
+User ──┐
+       ├── Salary     (positionId, amount, currency, period, yearsExperience)
+       ├── Comment     (positionId, content, rating, pros, cons)
+       ├── Interview   (positionId, process, questions, difficulty, duration, result, tips)
+       └── Document    (positionId, title, url, type, category)
+
+Company ──┐
+          ├── Department ── Position ──┐
+          ├── Position                 ├── Salary[]     → media/rango
+          ├── OrgNode (ReactFlow)      ├── Comment[]    → experiencias
+          └── OrgEdge (ReactFlow)      ├── Interview[]  → entrevistas
+                                       └── Document[]   → recursos
+```
+
+**Notas de diseño:**
+- Cada `Salary`, `Comment`, `Interview`, `Document` tiene `userId` (trazabilidad interna) pero se muestra anónimamente en el frontend.
+- `Company` incluye campos enriquecidos por el scraper: `ruc`, `logoUrl`, `website`, `metadata` (JSON libre para datos adicionales como redes sociales, nº trabajadores, etc.)
+- `Position` pertenece a una `Company` y opcionalmente a un `Department`.
+- `OrgNode` vincula nodos del organigrama ReactFlow con `Position` y soporta jerarquía padre-hijo.
+- Los salarios se muestran como **media** y **rango (min-max)** — nunca valores individuales.
 
 ---
 
