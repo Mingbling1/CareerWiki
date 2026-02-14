@@ -18,26 +18,42 @@ CREATE TABLE IF NOT EXISTS public.companies_staging (
     provincia VARCHAR(100),
     distrito VARCHAR(100),
     
-    -- Datos scrapeados
+    -- Datos de búsqueda
     website VARCHAR(500),
-    website_title VARCHAR(255),
-    website_snippet TEXT,
+    website_score INTEGER,
+    search_strategy VARCHAR(50),
     
-    -- Datos extraídos por AI
+    -- Datos scrapeados por el scraper API
     name VARCHAR(255),
     description TEXT,
+    history TEXT,
     industry VARCHAR(100),
     culture TEXT,
+    mission TEXT,
+    vision TEXT,
+    values_list JSONB DEFAULT '[]',
     benefits JSONB DEFAULT '[]',
     founded_year INTEGER,
+    founded_date VARCHAR(100),
+    original_name VARCHAR(255),
+    headquarters VARCHAR(500),
+    phones JSONB DEFAULT '[]',
+    emails JSONB DEFAULT '[]',
+    employee_count VARCHAR(100),
+    coverage TEXT,
+    shareholders JSONB DEFAULT '[]',
     social_links JSONB DEFAULT '{}',
     logo_url VARCHAR(500),
+    ruc_from_scraper VARCHAR(11),
+    pages_scraped JSONB DEFAULT '[]',
+    extras JSONB DEFAULT '{}',
+    fields_extracted INTEGER DEFAULT 0,
+    scrape_duration_ms INTEGER,
     
     -- Metadata
     tier VARCHAR(10), -- 'tier1', 'tier2', 'tier3'
-    scrape_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'scraped', 'failed', 'migrated'
+    scrape_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'searched', 'scraped', 'no_website', 'failed', 'migrated'
     scrape_error TEXT,
-    raw_ai_response JSONB,
     
     -- Control de migración
     migrated_to_app BOOLEAN DEFAULT FALSE,
