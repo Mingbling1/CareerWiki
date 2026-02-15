@@ -94,6 +94,15 @@ Company ──┐
 - `OrgNode` vincula nodos del organigrama ReactFlow con `Position` y soporta jerarquía padre-hijo.
 - Los salarios se muestran como **media** y **rango (min-max)** — nunca valores individuales.
 
+### Estrategia de Datos: 2 bases de datos
+
+| DB | Tabla | Propósito |
+|----|-------|-----------|
+| `empliq_dev` | `companies_raw` | Datos crudos del scraper (JSONB). Todo va al campo `data`. |
+| `empliq` | `companies` + modelos Prisma | App de producción. Datos estructurados. |
+
+**¿Por qué JSONB para scraper?** Los datos scrapeados son irregulares — algunas empresas tienen logo, ejecutivos, historial; otras solo RUC básico. En vez de 40+ columnas con NULLs, guardamos todo en un blob JSONB flexible. Cuando migremos a la app, extraemos solo lo que necesitamos.
+
 ---
 
 ## 🌐 Secciones de la Landing Page

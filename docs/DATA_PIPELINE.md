@@ -63,7 +63,7 @@
 │       ▼              ▼              ▼              ▼              ▼          │
 │  tier1_mega.csv  /enrich/       /search API   /scrape/url    PostgreSQL    │
 │                  datosperu       (DDG/Bing)    (Cheerio+AI)   companies_   │
-│                  (logo, desc,                                 staging      │
+│                  (logo, desc,                                 raw (JSONB)  │
 │                   ejecutivos,                                              │
 │                   trabajadores)              Wait 25s entre items          │
 │                                                                              │

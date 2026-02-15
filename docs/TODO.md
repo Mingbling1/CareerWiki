@@ -199,7 +199,7 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 - [x] `users` (Better Auth)
 - [x] `sessions` (Better Auth)
 - [x] `accounts` (Better Auth)
-- [x] `companies_staging` (n8n scraper pipeline)
+- [x] `companies_raw` (n8n scraper pipeline — JSONB en empliq_dev)
 
 ### Migraciones
 - [x] Schema inicial (Prisma)
@@ -253,7 +253,7 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 - [x] Deploy script con Traefik labels
 - [x] Integrado en oracle-dokploy deploy-https.sh
 - [x] Integración con n8n workflow (v5)
-- [x] Persistencia en PostgreSQL (companies_staging)
+- [x] Persistencia en PostgreSQL (companies_raw JSONB)
 
 ### DatosPeru Enrichment ✅
 - [x] Adapter: `DatosPeruHttpAdapter` (875 líneas)
@@ -278,7 +278,7 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 ### Orquestación (n8n)
 - [x] Workflow v5 con DatosPeru enrichment + Search + Scrape
 - [x] Logo URL extraído de DatosPeru (Top300)
-- [x] Tabla `companies_staging` con `datos_peru_data JSONB`
+- [x] Tabla `companies_raw` con `data JSONB` (incluye datos_peru)
 - [x] Upsert por RUC (match on conflict)
 - [x] Wait 25s entre items (anti-blocking)
 - [ ] Ejecutar pipeline Tier 1 completo

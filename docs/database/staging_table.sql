@@ -1,101 +1,110 @@
 -- ============================================
--- EMPLIQ - Staging Table for Scraped Companies
--- Para n8n workflow
+-- EMPLIQ - Raw Companies Table (Scraper Data)
+-- Base de datos: empliq_dev
+-- Para n8n workflow v5
+-- ============================================
+--
+-- Estrategia: TODO en JSONB
+-- Los datos del scraper vienen con campos variables
+-- (algunas empresas tienen logo, otras no; unas tienen
+-- ejecutivos, otras solo RUC). En vez de 40+ columnas
+-- con NULLs, guardamos todo en un blob JSONB flexible.
+--
+-- Cuando migremos a la app (tabla companies),
+-- extraemos lo que necesitamos con queries JSONB.
 -- ============================================
 
--- Tabla de staging para empresas scrapeadas
-CREATE TABLE IF NOT EXISTS public.companies_staging (
+-- NOTA: Esta tabla ya existe en empliq_dev (creada manualmente).
+-- Este archivo es referencia/documentación.
+
+CREATE TABLE IF NOT EXISTS public.companies_raw (
     id SERIAL PRIMARY KEY,
-    
-    -- Datos del RUC
     ruc VARCHAR(11) UNIQUE NOT NULL,
-    estado VARCHAR(50),
-    condicion VARCHAR(50),
-    tipo_empresa VARCHAR(100),
-    actividad_ciiu VARCHAR(255),
-    nro_trabajadores INTEGER,
-    departamento VARCHAR(100),
-    provincia VARCHAR(100),
-    distrito VARCHAR(100),
-    
-    -- Datos de búsqueda
-    website VARCHAR(500),
-    website_score INTEGER,
-    search_strategy VARCHAR(50),
-    
-    -- Datos scrapeados por el scraper API
-    name VARCHAR(255),
-    description TEXT,
-    history TEXT,
-    industry VARCHAR(100),
-    culture TEXT,
-    mission TEXT,
-    vision TEXT,
-    values_list JSONB DEFAULT '[]',
-    benefits JSONB DEFAULT '[]',
-    founded_year INTEGER,
-    founded_date VARCHAR(100),
-    original_name VARCHAR(255),
-    headquarters VARCHAR(500),
-    phones JSONB DEFAULT '[]',
-    emails JSONB DEFAULT '[]',
-    employee_count VARCHAR(100),
-    coverage TEXT,
-    shareholders JSONB DEFAULT '[]',
-    social_links JSONB DEFAULT '{}',
-    logo_url VARCHAR(500),
-    ruc_from_scraper VARCHAR(11),
-    pages_scraped JSONB DEFAULT '[]',
-    extras JSONB DEFAULT '{}',
-    fields_extracted INTEGER DEFAULT 0,
-    scrape_duration_ms INTEGER,
-    
-    -- DatosPeru enrichment (full JSON response from /enrich/datosperu)
-    datos_peru_data JSONB DEFAULT '{}',
-    
-    -- Metadata
-    tier VARCHAR(10), -- 'tier1', 'tier2', 'tier3'
-    scrape_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'searched', 'scraped', 'datosperu_only', 'no_website', 'failed', 'migrated'
-    scrape_error TEXT,
-    
-    -- Control de migración
-    migrated_to_app BOOLEAN DEFAULT FALSE,
-    migrated_at TIMESTAMPTZ,
-    app_company_id UUID, -- ID en la tabla companies de la app
-    
-    -- Timestamps
-    created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    scraped_at TIMESTAMPTZ
+    razon_social VARCHAR(500),
+    data JSONB NOT NULL DEFAULT '{}',
+    source VARCHAR(50) DEFAULT 'n8n_scraper',
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Índices
-CREATE INDEX IF NOT EXISTS idx_staging_ruc ON public.companies_staging(ruc);
-CREATE INDEX IF NOT EXISTS idx_staging_status ON public.companies_staging(scrape_status);
-CREATE INDEX IF NOT EXISTS idx_staging_migrated ON public.companies_staging(migrated_to_app);
-CREATE INDEX IF NOT EXISTS idx_staging_tier ON public.companies_staging(tier);
-
--- Trigger para updated_at
-CREATE OR REPLACE FUNCTION update_staging_updated_at()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-DROP TRIGGER IF EXISTS trigger_staging_updated_at ON public.companies_staging;
-CREATE TRIGGER trigger_staging_updated_at
-    BEFORE UPDATE ON public.companies_staging
-    FOR EACH ROW
-    EXECUTE FUNCTION update_staging_updated_at();
-
--- Comentario de la tabla
-COMMENT ON TABLE public.companies_staging IS 'Tabla de staging para empresas scrapeadas por n8n antes de migrar a la app';
+CREATE INDEX IF NOT EXISTS idx_companies_raw_ruc ON public.companies_raw(ruc);
+CREATE INDEX IF NOT EXISTS idx_companies_raw_data ON public.companies_raw USING gin(data);
 
 -- ============================================
--- Migration: Add datos_peru_data column (run on existing DBs)
+-- Estructura del campo `data` (JSONB)
 -- ============================================
--- ALTER TABLE public.companies_staging ADD COLUMN IF NOT EXISTS datos_peru_data JSONB DEFAULT '{}';
--- CREATE INDEX IF NOT EXISTS idx_staging_datos_peru ON public.companies_staging USING gin(datos_peru_data);
--- UPDATE public.companies_staging SET scrape_status = 'datosperu_only' WHERE scrape_status = 'no_website' AND datos_peru_data != '{}';
+--
+-- Todo va dentro de `data`. Ejemplo completo:
+--
+-- {
+--   // --- Datos del CSV/RUC ---
+--   "estado": "ACTIVO",
+--   "condicion": "HABIDO",
+--   "tipo_empresa": "SOCIEDAD ANONIMA CERRADA",
+--   "actividad_ciiu": "6419",
+--   "nro_trabajadores": 26500,
+--   "departamento": "LIMA",
+--   "provincia": "LIMA",
+--   "distrito": "LA MOLINA",
+--   "tier": "tier1",
+--
+--   // --- Datos de búsqueda web ---
+--   "website": "https://www.viabcp.com",
+--   "website_score": 25,
+--   "search_strategy": "ddg_http",
+--
+--   // --- Datos del scraper (website) ---
+--   "name": "Banco de Crédito del Perú",
+--   "description": "BCP es el banco más grande del Perú...",
+--   "history": "Fundado en 1889...",
+--   "industry": "Banca y Finanzas",
+--   "culture": null,
+--   "mission": "Transformar planes en realidad...",
+--   "vision": "Ser el banco líder...",
+--   "values_list": ["Integridad", "Innovación"],
+--   "benefits": ["Seguro de salud", "Bonos"],
+--   "founded_year": 1889,
+--   "headquarters": "Calle Centenario 156, La Molina, Lima",
+--   "phones": ["+51 1 311 9898"],
+--   "emails": ["contacto@bcp.com.pe"],
+--   "social_links": { "linkedin": "...", "facebook": "..." },
+--   "logo_url": "https://www.datosperu.org/top300/banco-de-credito.jpg",
+--   "pages_scraped": ["https://www.viabcp.com/", "https://www.viabcp.com/nosotros"],
+--   "fields_extracted": 15,
+--   "scrape_duration_ms": 4500,
+--
+--   // --- Datos de DatosPeru (raw completo) ---
+--   "datos_peru": { ... respuesta completa de /enrich/datosperu ... },
+--
+--   // --- Metadata del scraping ---
+--   "scrape_status": "scraped",
+--   "scrape_error": null,
+--   "scraped_at": "2026-02-14T20:00:00.000Z"
+-- }
+--
+-- ============================================
+-- Queries útiles sobre JSONB
+-- ============================================
+--
+-- Empresas con website:
+--   SELECT ruc, data->>'website' FROM companies_raw WHERE data->>'website' IS NOT NULL;
+--
+-- Empresas tier1:
+--   SELECT ruc, data->>'name' FROM companies_raw WHERE data->>'tier' = 'tier1';
+--
+-- Empresas con logo:
+--   SELECT ruc, data->>'logo_url' FROM companies_raw WHERE data->>'logo_url' IS NOT NULL;
+--
+-- Contar por status:
+--   SELECT data->>'scrape_status' AS status, count(*) FROM companies_raw GROUP BY 1;
+--
+-- Buscar por nombre (case-insensitive):
+--   SELECT * FROM companies_raw WHERE razon_social ILIKE '%banco%';
+--
+-- Extraer ejecutivos de DatosPeru:
+--   SELECT ruc, jsonb_array_elements(data->'datos_peru'->'ejecutivos') FROM companies_raw;
+--
+-- Top empresas por nro_trabajadores:
+--   SELECT ruc, razon_social, (data->>'nro_trabajadores')::int AS trab
+--   FROM companies_raw ORDER BY trab DESC NULLS LAST LIMIT 20;
