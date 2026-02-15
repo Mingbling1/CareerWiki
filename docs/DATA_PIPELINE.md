@@ -51,23 +51,53 @@
 ### Arquitectura
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         n8n WORKFLOW                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────┐    ┌──────────┐    ┌───────────┐    ┌──────────┐ │
-│  │  Leer    │───►│ Buscar   │───►│ Extraer   │───►│ Guardar  │ │
-│  │  CSV     │    │ Website  │    │ Info      │    │ en DB    │ │
-│  └──────────┘    └──────────┘    └───────────┘    └──────────┘ │
-│       │               │                │                │       │
-│       ▼               ▼                ▼                ▼       │
-│  tier1_mega.csv  Google Search   Scrape/AI       PostgreSQL    │
-│                  (site: query)   Extraction       (Empliq)     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              n8n WORKFLOW (v5)                                │
+├──────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────┐  ┌───────────┐  ┌──────────┐  ┌───────────┐  ┌────────────┐  │
+│  │  Leer    │─►│ Enriquecer│─►│ Buscar   │─►│ Extraer   │─►│ Guardar    │  │
+│  │  CSV     │  │ DatosPeru │  │ Website  │  │ Info Web  │  │ en DB      │  │
+│  └──────────┘  └───────────┘  └──────────┘  └───────────┘  └────────────┘  │
+│       │              │              │              │              │          │
+│       ▼              ▼              ▼              ▼              ▼          │
+│  tier1_mega.csv  /enrich/       /search API   /scrape/url    PostgreSQL    │
+│                  datosperu       (DDG/Bing)    (Cheerio+AI)   companies_   │
+│                  (logo, desc,                                 staging      │
+│                   ejecutivos,                                              │
+│                   trabajadores)              Wait 25s entre items          │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Paso 1: Búsqueda de Website
+### Paso 1: Enriquecimiento con DatosPeru ✅ PRODUCCIÓN
+
+Para cada empresa, el scraper API consulta datosperu.org y extrae:
+
+| Campo | Ejemplo |
+|-------|---------|
+| `nombre` | BANCO DE CREDITO DEL PERU |
+| `estado` | ACTIVO |
+| `tipo` | SOCIEDAD ANONIMA |
+| `ciiu` | 6419 |
+| `sectorEconomico` | OTROS TIPOS DE INTERMEDIACIÓN MONETARIA |
+| `direccion` | JR. CENTENARIO NRO. 156 URB. LADERAS DE MELGAREJO |
+| `telefonos` | ["+51 1 311 9898", "+51 1 313 2000"] |
+| `web` | https://www.viabcp.com/ |
+| `logoUrl` | https://www.datosperu.org/top300/banco-de-credito-del-peru.jpg |
+| `descripcion` | Con más de veintiseis mil empleados... |
+| `ejecutivos` | 20 (cargo, nombre, desde) |
+| `historialTrabajadores` | 20 períodos (nroTrab, pensionistas, prestadores) |
+| `establecimientosAnexos` | 16 (dirección, ubicación) |
+| `historialCondiciones` | 25 registros |
+| `proveedorEstado` | true/false |
+| `marcaComercioExterior` | SIN ACTIVIDAD |
+
+**Técnica:** HTTP puro (sin browser) + curl 8.17/OpenSSL 3.5 en Alpine Docker para bypass de Cloudflare JA3/JA4 fingerprinting. SOCKS5 proxy rotation como fallback.
+
+**Endpoint:** `GET /enrich/datosperu?ruc=XXXXXXXXXXX` (~12s por empresa)
+
+### Paso 2: Búsqueda de Website
 
 Para encontrar la página web oficial de cada empresa usamos:
 
@@ -80,23 +110,27 @@ Para encontrar la página web oficial de cada empresa usamos:
 "[NOMBRE_EMPRESA]" site:pe OR site:com.pe -linkedin -facebook
 ```
 
-### Paso 2: Extracción de Información
+### Paso 3: Extracción de Información
 
-De la página web extraemos:
+De la página web + DatosPeru extraemos:
 
 | Campo | Fuente | Método |
 |-------|--------|--------|
-| `name` | Website | Title / About |
-| `description` | Website | Meta description / About |
-| `industry` | RUC Data | CIIU |
+| `name` | DatosPeru > Website | Razón social oficial |
+| `description` | DatosPeru > Website | Top300 / Meta description |
+| `industry` | RUC / DatosPeru | CIIU + Sector Económico |
 | `size` | RUC Data | NroTrab |
-| `location` | RUC Data | Departamento |
-| `website` | Search | URL |
-| `logo_url` | Website | Favicon / Logo |
-| `founded_date` | Website | AI Extraction |
+| `location` | DatosPeru > RUC | Dirección fiscal completa |
+| `website` | Search > DatosPeru | URL oficial |
+| `logo_url` | DatosPeru > Website | `top300/` image o Scraper |
+| `founded_date` | DatosPeru > Website | Fecha de inicio SUNAT |
 | `social_links` | Website | Scraping |
+| `phones` | DatosPeru | Teléfonos registrados |
+| `ejecutivos` | DatosPeru | Apoderados, gerentes |
+| `historial_trab` | DatosPeru | Trabajadores por período |
+| `anexos` | DatosPeru | Establecimientos anexos |
 
-### Paso 3: Enriquecimiento con AI
+### Paso 4: Enriquecimiento con AI
 
 Usamos Claude/GPT para:
 
@@ -214,6 +248,45 @@ interface DatosWebsite {
   };
   culture?: string;         // Cultura organizacional
   benefits?: string[];      // Beneficios laborales
+}
+```
+
+### Desde DatosPeru (Producción ✅)
+
+```typescript
+interface DatosPeruEnrichment {
+  nombre: string;             // Razón social
+  estado: string;             // ACTIVO
+  tipo: string;               // SOCIEDAD ANONIMA
+  ciiu: string;               // 6419
+  sectorEconomico: string;    // Descripción del CIIU
+  direccion: string;          // Dirección fiscal
+  departamento: string;
+  provincia: string;
+  distrito: string;
+  telefonos: string[];        // Múltiples teléfonos
+  web: string;                // Sitio web registrado en SUNAT
+  logoUrl: string;            // Logo desde DatosPeru Top300
+  descripcion: string;        // Descripción corporativa
+  ejecutivos: Array<{
+    cargo: string;            // APODERADO, GERENTE, etc.
+    nombre: string;
+    desde: string;            // Fecha de nombramiento
+  }>;
+  historialTrabajadores: Array<{
+    periodo: string;          // "2025-09"
+    nroTrabajadores: number;
+    nroPensionistas: number;
+    nroPrestadores: number;
+  }>;
+  establecimientosAnexos: Array<{
+    direccion: string;
+    ubicacion: string;        // "LIMA - LIMA - MIRAFLORES"
+  }>;
+  proveedorEstado: boolean;
+  marcaComercioExterior: string;
+  fechaInicio: string;        // Fecha fundación
+  fechaInscripcion: string;   // Inscripción SUNAT
 }
 ```
 

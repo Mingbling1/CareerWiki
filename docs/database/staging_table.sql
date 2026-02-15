@@ -50,9 +50,12 @@ CREATE TABLE IF NOT EXISTS public.companies_staging (
     fields_extracted INTEGER DEFAULT 0,
     scrape_duration_ms INTEGER,
     
+    -- DatosPeru enrichment (full JSON response from /enrich/datosperu)
+    datos_peru_data JSONB DEFAULT '{}',
+    
     -- Metadata
     tier VARCHAR(10), -- 'tier1', 'tier2', 'tier3'
-    scrape_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'searched', 'scraped', 'no_website', 'failed', 'migrated'
+    scrape_status VARCHAR(20) DEFAULT 'pending', -- 'pending', 'searched', 'scraped', 'datosperu_only', 'no_website', 'failed', 'migrated'
     scrape_error TEXT,
     
     -- Control de migración
@@ -89,3 +92,10 @@ CREATE TRIGGER trigger_staging_updated_at
 
 -- Comentario de la tabla
 COMMENT ON TABLE public.companies_staging IS 'Tabla de staging para empresas scrapeadas por n8n antes de migrar a la app';
+
+-- ============================================
+-- Migration: Add datos_peru_data column (run on existing DBs)
+-- ============================================
+-- ALTER TABLE public.companies_staging ADD COLUMN IF NOT EXISTS datos_peru_data JSONB DEFAULT '{}';
+-- CREATE INDEX IF NOT EXISTS idx_staging_datos_peru ON public.companies_staging USING gin(datos_peru_data);
+-- UPDATE public.companies_staging SET scrape_status = 'datosperu_only' WHERE scrape_status = 'no_website' AND datos_peru_data != '{}';

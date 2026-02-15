@@ -1,0 +1,424 @@
+{
+  "name": "Empliq - Company Scraper API (v5)",
+  "nodes": [
+    {
+      "parameters": {
+        "filePath": "/files/tier1_mega_enriched.csv"
+      },
+      "id": "d71c6dac-ef23-4608-9ac1-93d0f19df406",
+      "name": "Read CSV File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [-200, 496]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "2809f1f9-ad62-42b2-b2d3-0efeb1642a06",
+      "name": "Parse CSV",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [0, 496]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "b1a2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [200, 496]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nconst ruc = String(item.json.RUC || '').trim();\nconst razonSocial = String(item.json.RazonSocial || '').trim();\nconst tipo = String(item.json.Tipo || '').trim();\nconst actividad = String(item.json.Actividad_CIIU3_Principal || '').trim();\nconst departamento = String(item.json.Departamento || '').trim();\nconst nroTrab = parseInt(item.json.NroTrab_num || item.json.NroTrab || '0') || 0;\n\nlet tier = 'tier3';\nif (nroTrab >= 1000) tier = 'tier1';\nelse if (nroTrab >= 500) tier = 'tier2';\n\nreturn {\n  json: {\n    ruc,\n    razonSocial,\n    tipo,\n    actividad,\n    departamento,\n    provincia: item.json.Provincia || null,\n    distrito: item.json.Distrito || null,\n    nroTrabajadores: nroTrab,\n    tier\n  }\n};"
+      },
+      "id": "f97547cb-3b81-4505-be03-6795f47c53fb",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 496]
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/enrich/datosperu?ruc={{ $json.ruc }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1b2c3d4-1111-4444-aaaa-111111111111",
+      "name": "Enrich DatosPeru",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 496],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/search?q={{ encodeURIComponent($('Prepare Data').first().json.razonSocial) }}&ruc={{ $('Prepare Data').first().json.ruc }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 90000
+        }
+      },
+      "id": "c8acd80a-f7af-47c8-88c9-97a96f181369",
+      "name": "Search Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 496],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "found-check",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "score-check",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 8,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eaeb639f-fedc-4c3e-a602-4cad03620f8a",
+      "name": "Website Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1080, 496]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://scraper.musuq.me/scrape/url",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"url\": \"{{ $json.website }}\",\n  \"followSubpages\": true,\n  \"timeoutMs\": 30000,\n  \"maxSubpages\": 3\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "77cb6377-2187-4a96-8954-358da9280f00",
+      "name": "Scrape Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 368],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Prepare Data').first().json;\nconst dp = $('Enrich DatosPeru').first().json;\nconst search = $('Search Website').first().json;\nconst scrape = $input.first().json;\n\nconst dpOk = dp.success === true;\n\n// Logo: DatosPeru > Scrape > null\nconst logoUrl = (dpOk && dp.logoUrl) || scrape.logoUrl || null;\n\n// Phones: merge DatosPeru + scrape, unique\nconst phones = [\n  ...(dpOk && dp.telefonos ? dp.telefonos : []),\n  ...(scrape.phones || [])\n].filter((v, i, a) => a.indexOf(v) === i);\n\nreturn { json: {\n  ruc: prep.ruc,\n  estado: dpOk ? (dp.estado || 'ACTIVO') : 'ACTIVO',\n  condicion: 'HABIDO',\n  tipo_empresa: dpOk ? (dp.tipo || prep.tipo) : prep.tipo,\n  actividad_ciiu: dpOk ? (dp.ciiu || prep.actividad) : prep.actividad,\n  nro_trabajadores: prep.nroTrabajadores,\n  departamento: dpOk ? (dp.departamento || prep.departamento) : prep.departamento,\n  provincia: dpOk ? (dp.provincia || prep.provincia) : prep.provincia,\n  distrito: dpOk ? (dp.distrito || prep.distrito) : prep.distrito,\n  website: search.website || (dpOk ? dp.web : null) || null,\n  website_score: search.score || 0,\n  search_strategy: search.strategyUsed || null,\n  name: dpOk ? (dp.nombre || scrape.name || prep.razonSocial) : (scrape.name || prep.razonSocial),\n  description: dpOk && dp.descripcion ? dp.descripcion : (scrape.description || null),\n  history: scrape.history || null,\n  industry: scrape.industry || prep.actividad,\n  culture: null,\n  mission: scrape.mission || null,\n  vision: scrape.vision || null,\n  values_list: JSON.stringify(scrape.values || []),\n  benefits: JSON.stringify([]),\n  founded_year: scrape.foundedYear || null,\n  founded_date: dpOk ? (dp.fechaInicio || scrape.foundedDate || null) : (scrape.foundedDate || null),\n  original_name: scrape.originalName || null,\n  headquarters: scrape.headquarters || (dpOk && dp.direccion ? [dp.direccion, dp.distrito, dp.provincia, dp.departamento].filter(Boolean).join(', ') : null),\n  phones: JSON.stringify(phones),\n  emails: JSON.stringify(scrape.emails || []),\n  employee_count: scrape.employeeCount || null,\n  coverage: scrape.coverage || null,\n  shareholders: JSON.stringify(scrape.shareholders || []),\n  social_links: JSON.stringify(scrape.socialLinks || {}),\n  logo_url: logoUrl,\n  ruc_from_scraper: scrape.ruc || null,\n  pages_scraped: JSON.stringify(scrape.pagesScraped || []),\n  extras: JSON.stringify({\n    scrape: scrape.extras || {},\n    ...(dpOk ? { datosperu_source: dp.sourceUrl } : {})\n  }),\n  fields_extracted: (scrape.fieldsExtracted || 0) + (dpOk ? dp.fieldsExtracted : 0),\n  scrape_duration_ms: (scrape.durationMs || 0) + (dpOk ? dp.durationMs : 0),\n  tier: prep.tier,\n  scrape_status: 'scraped',\n  scrape_error: null,\n  datos_peru_data: JSON.stringify(dpOk ? dp : {}),\n  scraped_at: new Date().toISOString(),\n  updated_at: new Date().toISOString()\n}};"
+      },
+      "id": "15f41fa6-1f21-48c4-9e3f-d3a70efb401f",
+      "name": "Build Full Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1520, 368]
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Prepare Data').first().json;\nconst dp = $('Enrich DatosPeru').first().json;\nconst search = $('Search Website').first().json;\n\nconst dpOk = dp.success === true;\n\nreturn { json: {\n  ruc: prep.ruc,\n  estado: dpOk ? (dp.estado || 'ACTIVO') : 'ACTIVO',\n  condicion: 'HABIDO',\n  tipo_empresa: dpOk ? (dp.tipo || prep.tipo) : prep.tipo,\n  actividad_ciiu: dpOk ? (dp.ciiu || prep.actividad) : prep.actividad,\n  nro_trabajadores: prep.nroTrabajadores,\n  departamento: dpOk ? (dp.departamento || prep.departamento) : prep.departamento,\n  provincia: dpOk ? (dp.provincia || prep.provincia) : prep.provincia,\n  distrito: dpOk ? (dp.distrito || prep.distrito) : prep.distrito,\n  website: dpOk ? (dp.web || null) : null,\n  website_score: 0,\n  search_strategy: search.strategyUsed || null,\n  name: dpOk ? (dp.nombre || prep.razonSocial) : prep.razonSocial,\n  description: dpOk ? (dp.descripcion || null) : null,\n  history: null,\n  industry: prep.actividad,\n  culture: null,\n  mission: null,\n  vision: null,\n  values_list: JSON.stringify([]),\n  benefits: JSON.stringify([]),\n  founded_year: null,\n  founded_date: dpOk ? (dp.fechaInicio || null) : null,\n  original_name: null,\n  headquarters: dpOk && dp.direccion ? [dp.direccion, dp.distrito, dp.provincia, dp.departamento].filter(Boolean).join(', ') : null,\n  phones: JSON.stringify(dpOk && dp.telefonos ? dp.telefonos : []),\n  emails: JSON.stringify([]),\n  employee_count: null,\n  coverage: null,\n  shareholders: JSON.stringify([]),\n  social_links: JSON.stringify({}),\n  logo_url: dpOk ? (dp.logoUrl || null) : null,\n  ruc_from_scraper: null,\n  pages_scraped: JSON.stringify([]),\n  extras: JSON.stringify({}),\n  fields_extracted: dpOk ? dp.fieldsExtracted : 0,\n  scrape_duration_ms: dpOk ? dp.durationMs : 0,\n  tier: prep.tier,\n  scrape_status: dpOk ? 'datosperu_only' : 'no_website',\n  scrape_error: dpOk ? null : 'No website found and DatosPeru enrichment failed',\n  datos_peru_data: JSON.stringify(dpOk ? dp : {}),\n  scraped_at: new Date().toISOString(),\n  updated_at: new Date().toISOString()\n}};"
+      },
+      "id": "11347535-36fb-4a7c-b8a8-2dda1458490f",
+      "name": "Build No-Website Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1300, 620]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "value": "public",
+          "__rl": true
+        },
+        "table": {
+          "value": "companies_staging",
+          "__rl": true
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["ruc"],
+          "schema": [],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f5cba050-53f6-4e81-9aed-a6ff9d6e7486",
+      "name": "Upsert to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1740, 368],
+      "credentials": {
+        "postgres": {
+          "id": "EJkkqXNj60d4gV2R",
+          "name": "Empliq DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "value": "public",
+          "__rl": true
+        },
+        "table": {
+          "value": "companies_staging",
+          "__rl": true
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": ["ruc"],
+          "schema": [],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a0e601e3-13df-4a82-b0ec-31daa772c271",
+      "name": "Upsert No-Website",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1520, 620],
+      "credentials": {
+        "postgres": {
+          "id": "EJkkqXNj60d4gV2R",
+          "name": "Empliq DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 25
+      },
+      "id": "55b6071e-c13f-436a-8437-6e8a1c6ae07d",
+      "name": "Wait 25s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1960, 496],
+      "webhookId": "wait-scraper"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Read CSV File": {
+      "main": [
+        [
+          {
+            "node": "Parse CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CSV": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        null,
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Enrich DatosPeru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich DatosPeru": {
+      "main": [
+        [
+          {
+            "node": "Search Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Website": {
+      "main": [
+        [
+          {
+            "node": "Website Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Website Found?": {
+      "main": [
+        [
+          {
+            "node": "Scrape Website",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build No-Website Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Website": {
+      "main": [
+        [
+          {
+            "node": "Build Full Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Full Record": {
+      "main": [
+        [
+          {
+            "node": "Upsert to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build No-Website Record": {
+      "main": [
+        [
+          {
+            "node": "Upsert No-Website",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to DB": {
+      "main": [
+        [
+          {
+            "node": "Wait 25s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert No-Website": {
+      "main": [
+        [
+          {
+            "node": "Wait 25s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 25s": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "v5-datosperu-enrichment",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "id": "8uiR56WTzhRqb3BF",
+  "tags": []
+}

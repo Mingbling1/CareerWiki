@@ -13,7 +13,8 @@
 | 🔐 Autenticación | 🟢 Completado | 100% |
 | 🌐 Website (Landing) | 🟢 Completado | 100% |
 | 📦 Storage (Oracle) | 🟢 Completado | 100% |
-| 🔍 Scraper Websites | � Completado | 95% |
+| 🔍 Scraper Websites | 🟢 Completado | 100% |
+| 🏢 DatosPeru Enrichment | 🟢 Producción | 100% |
 
 ---
 
@@ -198,6 +199,7 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 - [x] `users` (Better Auth)
 - [x] `sessions` (Better Auth)
 - [x] `accounts` (Better Auth)
+- [x] `companies_staging` (n8n scraper pipeline)
 
 ### Migraciones
 - [x] Schema inicial (Prisma)
@@ -250,12 +252,38 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 - [x] CI/CD (GitHub Actions → Oracle Cloud)
 - [x] Deploy script con Traefik labels
 - [x] Integrado en oracle-dokploy deploy-https.sh
-- [ ] Integración con n8n workflow
-- [ ] Persistencia de resultados en PostgreSQL
+- [x] Integración con n8n workflow (v5)
+- [x] Persistencia en PostgreSQL (companies_staging)
 
-### Orquestación
-> n8n consume `api-scraper` via HTTP. El microservicio expone
-> el estado de cada estrategia para que n8n decida cuándo cambiar.
+### DatosPeru Enrichment ✅
+- [x] Adapter: `DatosPeruHttpAdapter` (875 líneas)
+- [x] Puerto: `DatosPeruEnrichmentPort`
+- [x] Entidad: `DatosPeruProfile` con interfaces tipadas
+- [x] Controller: `GET /enrich/datosperu?ruc=XXXXXXXXXXX`
+- [x] DTOs con Swagger docs
+- [x] Parser de datos empresa (nombre, RUC, estado, tipo, CIIU)
+- [x] Parser de ejecutivos (cargo, nombre, fecha)
+- [x] Parser de establecimientos anexos
+- [x] Parser de historial trabajadores
+- [x] Parser de info histórica (condiciones, direcciones)
+- [x] Parser de sector económico y comercio exterior
+- [x] Parser de logo (`<img src*="top300">` → URL completa)
+- [x] Parser de descripción corporativa
+- [x] Bypass Cloudflare: Alpine Docker + curl 8.17/OpenSSL 3.5
+- [x] SOCKS5 proxy rotation (5 seed proxies)
+- [x] Fallback chain: directGet → proxyRotation → curlGet → curlDirectGet
+- [x] Modo directo (`DATOSPERU_DIRECT=true`) para IP residencial
+- [x] Producción funcionando (~12s/empresa, 15+ campos)
+
+### Orquestación (n8n)
+- [x] Workflow v5 con DatosPeru enrichment + Search + Scrape
+- [x] Logo URL extraído de DatosPeru (Top300)
+- [x] Tabla `companies_staging` con `datos_peru_data JSONB`
+- [x] Upsert por RUC (match on conflict)
+- [x] Wait 25s entre items (anti-blocking)
+- [ ] Ejecutar pipeline Tier 1 completo
+- [ ] Ejecutar pipeline Tier 2
+- [ ] Ejecutar pipeline Tier 3
 
 ```bash
 # Microservicio (recomendado)
@@ -328,4 +356,4 @@ npx pm2 start orchestrator.js --name scraper -- --headless
 
 ---
 
-*Última actualización: 10 de febrero de 2026*
+*Última actualización: 14 de febrero de 2026*
