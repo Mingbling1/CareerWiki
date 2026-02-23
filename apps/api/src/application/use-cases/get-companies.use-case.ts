@@ -3,8 +3,8 @@
 // ============================================
 
 import { Inject, Injectable } from '@nestjs/common';
+import { ICompanyRepository, COMPANY_REPOSITORY, FindAllOptions, PaginatedResult } from '../../domain/repositories';
 import { Company } from '../../domain/entities';
-import { ICompanyRepository, COMPANY_REPOSITORY } from '../../domain/repositories';
 
 @Injectable()
 export class GetCompaniesUseCase {
@@ -13,7 +13,7 @@ export class GetCompaniesUseCase {
     private readonly companyRepository: ICompanyRepository,
   ) {}
 
-  async execute(): Promise<Company[]> {
-    return this.companyRepository.findAll();
+  async execute(options?: FindAllOptions): Promise<PaginatedResult<Company>> {
+    return this.companyRepository.findAll(options);
   }
 }

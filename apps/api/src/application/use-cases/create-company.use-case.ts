@@ -12,11 +12,8 @@ export interface CreateCompanyInput {
   slug?: string;
   description?: string;
   industry?: string;
-  size?: string;
   location?: string;
   website?: string;
-  culture?: string;
-  benefits?: string[];
   logo?: {
     data: string; // base64
     fileName: string;
@@ -62,12 +59,9 @@ export class CreateCompanyUseCase {
       slug,
       description: input.description,
       industry: input.industry,
-      size: input.size,
       location: input.location,
       website: input.website,
       logoUrl,
-      culture: input.culture,
-      benefits: input.benefits,
     });
   }
 

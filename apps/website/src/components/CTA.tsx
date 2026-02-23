@@ -8,22 +8,22 @@ export function CTA() {
       
       {/* Background blur effect - similar to shader */}
       <div className="absolute inset-0">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-blue-400/20 via-cyan-300/15 to-blue-500/20 rounded-full blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-br from-neutral-400/15 via-neutral-300/10 to-neutral-500/15 rounded-full blur-[120px]" />
       </div>
       {/* Grid pattern */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:60px_60px]" />
       
       <div className="relative max-w-4xl mx-auto px-6 lg:px-8 text-center">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-blue-600/10 border border-blue-600/20 rounded-full px-4 py-2 mb-8">
-          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-blue-600 text-sm font-medium">100% Gratis para empezar</span>
+        <div className="inline-flex items-center gap-2 bg-neutral-900/10 border border-neutral-400/30 rounded-full px-4 py-2 mb-8">
+          <span className="w-2 h-2 rounded-full bg-neutral-600 animate-pulse" />
+          <span className="text-neutral-700 text-sm font-medium">100% Gratis para empezar</span>
         </div>
 
         {/* Heading */}
         <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-neutral-900 mb-6 leading-tight">
           Estamos construyendo{' '}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
             algo mejor.
           </span>
         </h2>

@@ -1,0 +1,279 @@
+{
+  "name": "Empliq - Proxy Validate",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "proxy-v01-trigger",
+      "name": "Every 30 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, ip, port, protocol, status, fail_count, consecutive_fails\nFROM proxies\nWHERE status IN ('testing', 'active', 'cooldown')\n  AND (last_checked_at IS NULL OR last_checked_at < NOW() - INTERVAL '25 minutes')\nORDER BY\n  CASE status WHEN 'testing' THEN 0 WHEN 'cooldown' THEN 1 ELSE 2 END,\n  last_checked_at ASC NULLS FIRST\nLIMIT 100;",
+        "options": {}
+      },
+      "id": "proxy-v02-get-proxies",
+      "name": "Get Proxies to Test",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -160,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nif (items.length === 0) {\n  console.log('✅ No proxies to validate');\n  return [];\n}\nconsole.log(`🧪 Validating ${items.length} proxies...`);\nreturn items;"
+      },
+      "id": "proxy-v02b-check",
+      "name": "Check if Any",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "proxy-v03-loop",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/proxies/test",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ip: $json.ip, port: $json.port, protocol: $json.protocol }) }}",
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "proxy-v04-test",
+      "name": "Test Proxy via Scraper",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const proxy = $('Loop Items').first().json;\nconst result = $input.first().json;\n\nconst isOk = result.success === true;\nconst responseMs = result.responseMs || null;\n\nlet newStatus, newConsecFails, newFailCount, newSuccessCount;\n\nif (isOk) {\n  newStatus = 'active';\n  newConsecFails = 0;\n  newFailCount = proxy.fail_count || 0;\n  newSuccessCount = (proxy.success_count || 0) + 1;\n} else {\n  newConsecFails = (proxy.consecutive_fails || 0) + 1;\n  newFailCount = (proxy.fail_count || 0) + 1;\n  newSuccessCount = proxy.success_count || 0;\n  \n  if (newConsecFails >= 5) {\n    newStatus = 'dead';\n  } else if (newConsecFails >= 3) {\n    newStatus = 'cooldown';\n  } else {\n    newStatus = proxy.status === 'testing' ? 'testing' : 'active';\n  }\n}\n\nconst avgMs = isOk && responseMs \n  ? (proxy.avg_response_ms ? Math.round((proxy.avg_response_ms + responseMs) / 2) : responseMs)\n  : proxy.avg_response_ms;\n\nconst emoji = isOk ? '✅' : '❌';\nconsole.log(`${emoji} ${proxy.ip}:${proxy.port} | ${isOk ? responseMs + 'ms' : 'FAIL'} | ${newStatus}`);\n\nconst query = `\nUPDATE proxies SET\n  status = '${newStatus}',\n  fail_count = ${newFailCount},\n  success_count = ${newSuccessCount},\n  consecutive_fails = ${newConsecFails},\n  avg_response_ms = ${avgMs || 'NULL'},\n  last_response_ms = ${responseMs || 'NULL'},\n  last_checked_at = NOW(),\n  last_success_at = ${isOk ? 'NOW()' : 'last_success_at'}\nWHERE id = ${proxy.id};\n`;\n\nreturn { json: { query, proxy_id: proxy.id, status: newStatus } };"
+      },
+      "id": "proxy-v05-evaluate",
+      "name": "Evaluate Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        700,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}",
+        "options": {}
+      },
+      "id": "proxy-v06-update",
+      "name": "Update Proxy Status",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        920,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "proxy-v07-wait",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1140,
+        300
+      ],
+      "webhookId": "wait-proxy-val"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- Auto-kill proxies that have been dead too long\nUPDATE proxies SET status = 'dead' WHERE consecutive_fails >= 5 AND status != 'dead';\n\n-- Summary\nSELECT \n  status,\n  COUNT(*) as count,\n  ROUND(AVG(avg_response_ms))::int as avg_ms,\n  MIN(last_checked_at) as oldest_check\nFROM proxies\nGROUP BY status\nORDER BY count DESC;",
+        "options": {}
+      },
+      "id": "proxy-v08-summary",
+      "name": "Final Summary",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        480,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 30 Min": {
+      "main": [
+        [
+          {
+            "node": "Get Proxies to Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Proxies to Test": {
+      "main": [
+        [
+          {
+            "node": "Check if Any",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Any": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [
+          {
+            "node": "Final Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Test Proxy via Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Proxy via Scraper": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Result": {
+      "main": [
+        [
+          {
+            "node": "Update Proxy Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Proxy Status": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "proxy-validate-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "tags": []
+}

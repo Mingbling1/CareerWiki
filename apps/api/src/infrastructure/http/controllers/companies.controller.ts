@@ -5,11 +5,12 @@ import {
   Put,
   Param,
   Body,
+  Query,
   HttpCode,
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiQuery } from '@nestjs/swagger';
 import {
   GetCompaniesUseCase,
   GetCompanyBySlugUseCase,
@@ -29,10 +30,27 @@ export class CompaniesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Get all companies' })
-  @ApiResponse({ status: 200, description: 'List of companies' })
-  async findAll() {
-    return this.getCompanies.execute();
+  @ApiOperation({ summary: 'Get companies with pagination and search' })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  @ApiQuery({ name: 'search', required: false, type: String })
+  @ApiQuery({ name: 'industry', required: false, type: String })
+  @ApiQuery({ name: 'location', required: false, type: String })
+  @ApiResponse({ status: 200, description: 'Paginated list of companies' })
+  async findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('industry') industry?: string,
+    @Query('location') location?: string,
+  ) {
+    return this.getCompanies.execute({
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      search: search || undefined,
+      industry: industry || undefined,
+      location: location || undefined,
+    });
   }
 
   @Post()
@@ -48,11 +66,8 @@ export class CompaniesController {
       slug: dto.slug,
       description: dto.description,
       industry: dto.industry,
-      size: dto.size,
       location: dto.location,
       website: dto.website,
-      culture: dto.culture,
-      benefits: dto.benefits,
       logo: dto.logo,
     });
   }
@@ -73,11 +88,8 @@ export class CompaniesController {
       slug: dto.slug,
       description: dto.description,
       industry: dto.industry,
-      size: dto.size,
       location: dto.location,
       website: dto.website,
-      culture: dto.culture,
-      benefits: dto.benefits,
       logo: dto.logo,
       removeLogo: dto.removeLogo,
     });

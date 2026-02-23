@@ -10,7 +10,7 @@ class AddSalaryDto {
 
   @IsString()
   @IsOptional()
-  currency?: string = 'MXN';
+  currency?: string = 'PEN';
 
   @IsString()
   @IsOptional()
@@ -48,7 +48,7 @@ export class SalariesController {
       positionId,
       userId,
       amount: dto.amount,
-      currency: dto.currency || 'MXN',
+      currency: dto.currency || 'PEN',
       period: dto.period || 'monthly',
       yearsExperience: dto.yearsExperience,
     });

@@ -1,187 +1,64 @@
-# Empliq - Documentación Técnica
+# Empliq — Documentación
 
-> Plataforma de transparencia laboral para profesionales en México y Latinoamérica.
-
-## 📋 Índice
-
-1. [Visión General](#visión-general)
-2. [Arquitectura](#arquitectura)
-3. [Stack Tecnológico](#stack-tecnológico)
-4. [Estructura del Proyecto](#estructura-del-proyecto)
-5. [Guías de Desarrollo](#guías-de-desarrollo)
+> Plataforma de transparencia laboral centrada en empresas. Red social donde profesionales comparten anónimamente salarios, organigramas y experiencias laborales.
 
 ---
 
-## Visión General
+## Navegación
 
-**Empliq** es una plataforma colaborativa donde profesionales comparten información verificada sobre:
-- Salarios reales por puesto y empresa
-- Requisitos y habilidades de puestos
-- Estructuras organizacionales (organigramas)
-- Experiencias laborales anónimas
+### Estado del Proyecto
+- **[TODO.md](./TODO.md)** — Source of truth. Estado actual, prioridades P0/P1/P2, definición de done.
 
-### Propuesta de Valor
-"Descubre lo que realmente se necesita para conseguir el trabajo que quieres. Información real, de personas reales."
+### Arquitectura
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Diagramas Mermaid: contenedores Docker, arquitectura hexagonal, flujo de datos, modelo ER, stack tecnológico.
 
----
+### Producto
+- [product/BRIEF.md](./product/BRIEF.md) — Brief de la landing page y definición del producto MVP
+- [product/MVP.md](./product/MVP.md) — Funcionalidades del MVP, modelo de datos, flujos de usuario
 
-## Arquitectura
+### Técnico
+- [technical/AUTH.md](./technical/AUTH.md) — Implementación de Better Auth (NestJS + React)
+- [technical/DATA_PIPELINE.md](./technical/DATA_PIPELINE.md) — Pipeline de datos, scraping, segmentación de empresas
+- [technical/DESIGN_SYSTEM.md](./technical/DESIGN_SYSTEM.md) — Tokens de diseño, componentes, tipografía, colores
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         FRONTEND                                 │
-│  ┌─────────────────┐    ┌─────────────────┐                     │
-│  │   Website       │    │   App (React)   │                     │
-│  │   (Next.js)     │    │   SPA           │                     │
-│  │   Landing Page  │    │   Dashboard     │                     │
-│  └────────┬────────┘    └────────┬────────┘                     │
-│           │                      │                               │
-│           └──────────┬───────────┘                               │
-│                      │                                           │
-│                      ▼                                           │
-│           ┌─────────────────────┐                               │
-│           │   Supabase Auth     │  ← Google, LinkedIn OAuth     │
-│           │   (Auth Provider)   │                               │
-│           └──────────┬──────────┘                               │
-└──────────────────────│──────────────────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                         BACKEND                                  │
-│                                                                  │
-│  ┌─────────────────────────────────────────────────────────┐    │
-│  │              NestJS (Arquitectura Hexagonal)             │    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │    │
-│  │  │ Application │  │   Domain    │  │Infrastructure│      │    │
-│  │  │   Layer     │  │   Layer     │  │    Layer    │      │    │
-│  │  │ (Use Cases) │  │  (Entities) │  │  (Adapters) │      │    │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘      │    │
-│  └─────────────────────────────────────────────────────────┘    │
-│                              │                                   │
-│                              ▼                                   │
-│                    ┌─────────────────┐                          │
-│                    │   PostgreSQL    │                          │
-│                    │   (Supabase)    │                          │
-│                    └─────────────────┘                          │
-└─────────────────────────────────────────────────────────────────┘
-```
+### Decisiones (ADR)
+- [decisions/001 — Arquitectura Hexagonal](./decisions/001-hexagonal-architecture.md)
+- [decisions/002 — Better Auth](./decisions/002-better-auth.md)
+- [decisions/003 — Dual Database JSONB](./decisions/003-dual-database-jsonb.md)
+- [decisions/004 — Pipeline DatosPeru](./decisions/004-datosperu-only-pipeline.md)
+- [decisions/005 — Diseño Monocromático](./decisions/005-monochromatic-design.md)
+- [decisions/006 — Oracle Cloud ARM](./decisions/006-oracle-cloud-arm.md)
 
-### Arquitectura Hexagonal (Ports & Adapters)
+### Apps (Componentes)
+- [apps/api.md](./apps/api.md) — API: entidades, use cases, endpoints, variables
+- [apps/frontend.md](./apps/frontend.md) — Frontend: páginas, componentes, organigrama
+- [apps/website.md](./apps/website.md) — Website: composición, identidad visual, assets
+- [apps/scraper.md](./apps/scraper.md) — Scraper: estrategias, DatosPeru, endpoints
 
-El backend sigue el patrón de Arquitectura Hexagonal para mantener el dominio desacoplado:
+### Guías (Runbooks)
+- [guides/LOCAL_SETUP.md](./guides/LOCAL_SETUP.md) — Setup local con Docker
+- [guides/DEPLOY.md](./guides/DEPLOY.md) — Deploy a Oracle Cloud ARM
+- [guides/TROUBLESHOOTING.md](./guides/TROUBLESHOOTING.md) — Problemas comunes y soluciones
 
-```
-src/
-├── domain/                    # 🔵 Núcleo del negocio (sin dependencias externas)
-│   ├── entities/              # Entidades de dominio
-│   ├── value-objects/         # Objetos de valor
-│   ├── repositories/          # Interfaces de repositorios (Ports)
-│   └── services/              # Servicios de dominio
-│
-├── application/               # 🟢 Casos de uso
-│   ├── use-cases/             # Implementación de casos de uso
-│   ├── dtos/                  # Data Transfer Objects
-│   └── ports/                 # Interfaces de servicios externos
-│
-└── infrastructure/            # 🟠 Adaptadores e implementaciones
-    ├── persistence/           # Implementación de repositorios (PostgreSQL)
-    ├── http/                  # Controladores REST
-    ├── auth/                  # Integración con Supabase Auth
-    └── external-services/     # Servicios externos
-```
+### Referencia
+- [database/schema.sql](./database/schema.sql) — Schema SQL de init
+- [database/staging_table.sql](./database/staging_table.sql) — Tabla staging
+- [database/proxies_table.sql](./database/proxies_table.sql) — Tabla de proxies
+- [n8n-workflows/](./n8n-workflows/) — Workflows de n8n (JSON)
 
 ---
 
-## Stack Tecnológico
-
-### Frontend
-
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| **React** | 19.x | UI Library |
-| **TypeScript** | 5.x | Tipado estático |
-| **Vite** | 6.x | Build tool |
-| **TailwindCSS** | 4.x | Estilos utility-first |
-| **React Query** | 5.x | Estado del servidor |
-| **Zustand** | 5.x | Estado global |
-| **React Router** | 7.x | Routing |
-
-### Backend
-
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| **NestJS** | 11.x | Framework backend |
-| **TypeScript** | 5.x | Tipado estático |
-| **PostgreSQL** | 16.x | Base de datos |
-| **Prisma** | 6.x | ORM |
-| **Supabase** | - | Auth + DB hosting |
-
-### Website (Landing)
-
-| Tecnología | Versión | Propósito |
-|------------|---------|-----------|
-| **Next.js** | 16.x | Framework React SSR |
-| **Three.js** | - | WebGL backgrounds |
-| **TailwindCSS** | 4.x | Estilos |
-
----
-
-## Estructura del Proyecto
-
-```
-empliq/
-├── apps/
-│   ├── website/               # Landing page (Next.js)
-│   ├── web/                   # App principal (React + Vite)
-│   └── api/                   # Backend (NestJS) [por crear]
-│
-├── packages/                  # Paquetes compartidos [por crear]
-│   ├── ui/                    # Componentes UI compartidos
-│   ├── types/                 # Tipos TypeScript compartidos
-│   └── utils/                 # Utilidades compartidas
-│
-├── docs/                      # Documentación
-│   ├── README.md              # Este archivo
-│   ├── DESIGN_SYSTEM.md       # Sistema de diseño
-│   ├── API.md                 # Documentación API
-│   └── ARCHITECTURE.md        # Arquitectura detallada
-│
-└── infrastructure/            # Configuración de infraestructura
-    ├── docker/
-    └── kubernetes/
-```
-
----
-
-## Guías de Desarrollo
-
-### Documentos Relacionados
-
-- [Sistema de Diseño](./DESIGN_SYSTEM.md) - Tipografía, colores, componentes
-- [Arquitectura](./ARCHITECTURE.md) - Detalles de arquitectura hexagonal
-- [API](./API.md) - Endpoints y contratos
-- [Brief Landing](./BRIEF_LANDING.md) - Especificaciones del website
-
-### Comandos Rápidos
+## Quick Start
 
 ```bash
-# Desarrollo website
-cd apps/website && npm run dev
-
-# Desarrollo app
-cd apps/web && npm run dev
-
-# Desarrollo API (cuando esté configurado)
-cd apps/api && npm run start:dev
+cd docker
+docker compose -f docker-compose.dev.yml up -d
 ```
 
----
-
-## Autenticación
-
-Utilizamos **Supabase Auth** como proveedor de autenticación, con soporte para:
-- Google OAuth
-- LinkedIn OAuth
-- Email/Password (opcional)
-
-Ver [AUTH.md](./AUTH.md) para detalles de implementación.
+| Servicio | URL |
+|----------|-----|
+| Website | http://localhost:3000 |
+| Frontend | http://localhost:5173 |
+| API | http://localhost:4000 |
+| Scraper | http://localhost:3457/docs |
+| PostgreSQL | localhost:5432 |

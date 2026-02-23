@@ -35,7 +35,7 @@ export function CookieBanner() {
             Utilizamos cookies para mejorar tu experiencia en nuestro sitio.{' '}
             <a 
               href="/privacidad" 
-              className="text-blue-400 hover:text-blue-300 underline underline-offset-2"
+              className="text-neutral-300 hover:text-white underline underline-offset-2"
             >
               Política de privacidad
             </a>
@@ -50,7 +50,7 @@ export function CookieBanner() {
           </button>
           <button
             onClick={handleAccept}
-            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-5 py-2.5 text-sm font-medium bg-white text-neutral-900 rounded-lg hover:bg-neutral-100 transition-colors"
           >
             Aceptar
           </button>

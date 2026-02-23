@@ -92,12 +92,12 @@ export function UseCases() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <p className="text-blue-600 font-medium mb-4 tracking-wider uppercase text-sm">
+          <p className="text-neutral-500 font-medium mb-4 tracking-wider uppercase text-sm">
             Casos de uso
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
             Usa Empliq para construir{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
               tu carrera.
             </span>
           </h2>
@@ -126,12 +126,12 @@ export function UseCases() {
 
                 <div className="relative">
                   {/* Icon */}
-                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-600 mb-6 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-600 mb-6 group-hover:bg-neutral-900 group-hover:text-white group-hover:border-neutral-800 transition-colors">
                     {useCase.icon}
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-2xl font-semibold text-neutral-900 mb-3 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-2xl font-semibold text-neutral-900 mb-3 group-hover:text-neutral-700 transition-colors">
                     {useCase.title}
                   </h3>
 
@@ -144,7 +144,7 @@ export function UseCases() {
                   <ul className="space-y-2">
                     {useCase.features.map((feature, j) => (
                       <li key={j} className="flex items-center gap-2 text-neutral-500 text-sm">
-                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-neutral-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
                         {feature}
@@ -153,7 +153,7 @@ export function UseCases() {
                   </ul>
 
                   {/* Arrow */}
-                  <div className="mt-6 flex items-center gap-2 text-neutral-400 group-hover:text-blue-600 transition-colors">
+                  <div className="mt-6 flex items-center gap-2 text-neutral-400 group-hover:text-neutral-900 transition-colors">
                     <span className="text-sm font-medium">Explorar</span>
                     <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

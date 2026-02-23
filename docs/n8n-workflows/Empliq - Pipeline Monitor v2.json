@@ -1,0 +1,221 @@
+{
+  "name": "Empliq - Pipeline Monitor v2",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "mon2-01-trigger",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  -- Tier 1-3 (v6)\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_v6') as v6_total,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_v6' AND data->>'scrape_status' = 'enriched') as v6_enriched,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_v6' AND data->>'scrape_status' = 'failed') as v6_failed,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_v6' AND data->>'scrape_status' = 'failed_retry') as v6_failed_retry,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_v6' AND data->>'retry_at' IS NOT NULL AND data->>'scrape_status' = 'enriched') as v6_fixed_by_retry,\n  -- Tier 4-5 (t45)\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_t45') as t45_total,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_t45' AND data->>'scrape_status' = 'enriched') as t45_enriched,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_t45' AND data->>'scrape_status' = 'failed') as t45_failed,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_t45' AND data->>'scrape_status' = 'failed_retry') as t45_failed_retry,\n  COUNT(*) FILTER (WHERE source = 'n8n_datosperu_t45' AND data->>'retry_at' IS NOT NULL AND data->>'scrape_status' = 'enriched') as t45_fixed_by_retry,\n  -- By tier\n  COUNT(*) FILTER (WHERE data->>'tier' = 'tier1') as tier1,\n  COUNT(*) FILTER (WHERE data->>'tier' = 'tier2') as tier2,\n  COUNT(*) FILTER (WHERE data->>'tier' = 'tier3') as tier3,\n  COUNT(*) FILTER (WHERE data->>'tier' = 'tier4') as tier4,\n  COUNT(*) FILTER (WHERE data->>'tier' = 'tier5') as tier5,\n  -- Totals\n  COUNT(*) as grand_total,\n  ROUND(AVG((data->>'scrape_duration_ms')::numeric / 1000), 1) as avg_sec,\n  ROUND(AVG((data->>'fields_extracted')::numeric), 0) as avg_fields,\n  MIN(created_at) as started_at,\n  MAX(updated_at) as last_updated\nFROM companies_raw\nWHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_t45');",
+        "options": {}
+      },
+      "id": "mon2-02-stats",
+      "name": "Query Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -100,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social,\n  data->>'scrape_status' as status,\n  data->>'fields_extracted' as fields,\n  data->>'tier' as tier,\n  source,\n  updated_at\nFROM companies_raw\nWHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_t45')\nORDER BY updated_at DESC\nLIMIT 10;",
+        "options": {}
+      },
+      "id": "mon2-03-recent",
+      "name": "Last 10 Processed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -100,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social,\n  data->>'scrape_status' as status,\n  data->>'scrape_error' as error,\n  data->>'tier' as tier,\n  source,\n  data->>'retry_at' as retry_at\nFROM companies_raw\nWHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_t45')\n  AND data->>'scrape_status' IN ('failed', 'failed_retry')\nORDER BY updated_at DESC\nLIMIT 20;",
+        "options": {}
+      },
+      "id": "mon2-04-failures",
+      "name": "Failed Companies",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -100,
+        448
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT status, COUNT(*) as cnt, ROUND(AVG(avg_response_ms))::int as avg_ms\nFROM proxies\nGROUP BY status\nORDER BY cnt DESC;",
+        "options": {}
+      },
+      "id": "mon2-05-proxies",
+      "name": "Proxy Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -100,
+        672
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "id": "mon2-06-merge",
+      "name": "Wait All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        200,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const s = $('Query Stats').first().json;\nconst recent = $('Last 10 Processed').all().map(i => i.json);\nconst failures = $('Failed Companies').all().map(i => i.json);\n\n// Proxy stats (may be empty if table doesn't exist yet)\nlet proxyInfo = 'No proxy table yet';\ntry {\n  const proxyItems = $('Proxy Stats').all();\n  if (proxyItems.length > 0) {\n    proxyInfo = proxyItems.map(p => `${p.json.status}: ${p.json.cnt} (avg ${p.json.avg_ms || '?'}ms)`).join(' | ');\n  }\n} catch(e) { proxyInfo = 'Table not created yet'; }\n\n// Tier 1-3 pipeline\nconst v6Total = parseInt(s.v6_total) || 0;\nconst v6Enriched = parseInt(s.v6_enriched) || 0;\nconst v6Failed = parseInt(s.v6_failed) || 0;\nconst v6FailedRetry = parseInt(s.v6_failed_retry) || 0;\nconst v6Fixed = parseInt(s.v6_fixed_by_retry) || 0;\nconst TARGET_V6 = 6123;\n\n// Tier 4-5 pipeline\nconst t45Total = parseInt(s.t45_total) || 0;\nconst t45Enriched = parseInt(s.t45_enriched) || 0;\nconst t45Failed = parseInt(s.t45_failed) || 0;\nconst t45FailedRetry = parseInt(s.t45_failed_retry) || 0;\nconst t45Fixed = parseInt(s.t45_fixed_by_retry) || 0;\nconst TARGET_T45 = 16816;\n\n// Grand totals\nconst grandTotal = parseInt(s.grand_total) || 0;\nconst TARGET_ALL = TARGET_V6 + TARGET_T45;\n\n// By tier\nconst t1 = parseInt(s.tier1) || 0;\nconst t2 = parseInt(s.tier2) || 0;\nconst t3 = parseInt(s.tier3) || 0;\nconst t4 = parseInt(s.tier4) || 0;\nconst t5 = parseInt(s.tier5) || 0;\n\nconst avgSec = s.avg_sec || 'N/A';\nconst t45Remaining = TARGET_T45 - t45Total;\nconst etaHours = t45Remaining > 0 ? ((t45Remaining * (parseFloat(avgSec || 5) + 15)) / 3600).toFixed(1) : '0';\n\nreturn { json: {\n  '📊 PIPELINE MONITOR v2': '════════════════════════════',\n  grand_total: `${grandTotal} / ${TARGET_ALL} (${((grandTotal/TARGET_ALL)*100).toFixed(1)}%)`,\n  '🔵 TIER 1-3 (v6)': '────────────────',\n  v6_progress: `${v6Total} / ${TARGET_V6} (${((v6Total/TARGET_V6)*100).toFixed(1)}%)`,\n  v6_enriched: v6Enriched,\n  v6_failed: v6Failed,\n  v6_failed_retry: v6FailedRetry,\n  v6_fixed_by_retry: v6Fixed,\n  v6_success_rate: `${v6Total > 0 ? (((v6Total - v6Failed - v6FailedRetry) / v6Total) * 100).toFixed(1) : 0}%`,\n  '🟢 TIER 4-5 (t45)': '────────────────',\n  t45_progress: `${t45Total} / ${TARGET_T45} (${((t45Total/TARGET_T45)*100).toFixed(1)}%)`,\n  t45_enriched: t45Enriched,\n  t45_failed: t45Failed,\n  t45_failed_retry: t45FailedRetry,\n  t45_fixed_by_retry: t45Fixed,\n  t45_remaining: t45Remaining,\n  t45_eta: `~${etaHours} hours`,\n  '📈 BY TIER': '────────────────',\n  tier1: `${t1} (≥1000 emp)`,\n  tier2: `${t2} (500-999)`,\n  tier3: `${t3} (100-499)`,\n  tier4: `${t4} (50-99)`,\n  tier5: `${t5} (20-49)`,\n  '🔗 PROXIES': '────────────────',\n  proxy_status: proxyInfo,\n  '⏱️ TIMING': '────────────────',\n  avg_duration: `${avgSec}s`,\n  avg_fields: s.avg_fields || 'N/A',\n  started_at: s.started_at || 'N/A',\n  last_updated: s.last_updated || 'N/A',\n  '📋 LAST 10': '────────────────',\n  recent: recent.map(r => `${r.ruc} | ${(r.razon_social||'').substring(0,30)} | ${r.status} | ${r.fields} flds | ${r.tier} | ${r.source}`),\n  '❌ FAILURES': '────────────────',\n  total_failing: (v6Failed + v6FailedRetry + t45Failed + t45FailedRetry),\n  failed_list: failures.map(f => `${f.ruc} | ${(f.razon_social||'').substring(0,25)} | ${f.status} | ${f.tier} | ${f.error || 'no detail'}`)\n}};"
+      },
+      "id": "mon2-07-format",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        250
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Query Stats",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Last 10 Processed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Failed Companies",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Proxy Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Stats": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 10 Processed": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Failed Companies": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Proxy Stats": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Wait All": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "monitor-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "tags": []
+}

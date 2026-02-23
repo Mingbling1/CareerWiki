@@ -11,15 +11,7 @@ const footerLinks = {
       { label: 'Comunidad', href: '/comunidad' },
     ],
   },
-  developers: {
-    title: 'DESARROLLADORES',
-    links: [
-      { label: 'Documentación', href: '/docs' },
-      { label: 'API', href: '/api' },
-      { label: 'Contribuir', href: '/contribuir' },
-      { label: 'Roadmap', href: '/roadmap' },
-    ],
-  },
+
   company: {
     title: 'EMPRESA',
     links: [
@@ -76,7 +68,7 @@ export function Footer() {
   return (
     <footer className="relative bg-neutral-50 pt-24 pb-12 border-t border-neutral-200">
       {/* Top gradient line */}
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neutral-400/30 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Main CTA section */}
@@ -86,7 +78,7 @@ export function Footer() {
           </p>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-neutral-900 mb-8 leading-tight">
             La transparencia laboral<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
               empieza contigo.
             </span>
           </h2>
@@ -110,7 +102,7 @@ export function Footer() {
         </div>
 
         {/* Links section */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 pb-16 border-b border-neutral-200">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pb-16 border-b border-neutral-200">
           {/* Logo column */}
           <div className="col-span-2 md:col-span-1 flex flex-col gap-4">
             <Link href="/" className="inline-flex items-center gap-2.5 group">
@@ -141,25 +133,6 @@ export function Footer() {
             </h4>
             <ul className="space-y-3">
               {footerLinks.useCases.links.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-neutral-600 hover:text-neutral-900 text-sm transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Developers */}
-          <div>
-            <h4 className="text-neutral-400 font-medium text-xs tracking-wider mb-4">
-              {footerLinks.developers.title}
-            </h4>
-            <ul className="space-y-3">
-              {footerLinks.developers.links.map((link) => (
                 <li key={link.href}>
                   <Link
                     href={link.href}

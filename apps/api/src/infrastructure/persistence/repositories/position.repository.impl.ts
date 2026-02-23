@@ -24,11 +24,11 @@ export class PositionRepositoryImpl implements IPositionRepository {
     const position = await this.prisma.position.create({
       data: {
         companyId: data.companyId!,
-        departmentId: data.departmentId,
+        categoryId: data.categoryId,
         title: data.title!,
+        slug: data.slug!,
         description: data.description,
         level: data.level,
-        requirements: data.requirements || [],
       },
     });
     return this.toDomain(position);
@@ -39,9 +39,10 @@ export class PositionRepositoryImpl implements IPositionRepository {
       where: { id },
       data: {
         title: data.title,
+        slug: data.slug,
         description: data.description,
         level: data.level,
-        requirements: data.requirements,
+        categoryId: data.categoryId,
       },
     });
     return this.toDomain(position);
@@ -55,11 +56,11 @@ export class PositionRepositoryImpl implements IPositionRepository {
     return Position.create({
       id: data.id,
       companyId: data.companyId,
-      departmentId: data.departmentId,
+      categoryId: data.categoryId,
       title: data.title,
+      slug: data.slug,
       description: data.description,
       level: data.level,
-      requirements: data.requirements,
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
     });

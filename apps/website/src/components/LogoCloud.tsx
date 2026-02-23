@@ -1,19 +1,20 @@
 'use client'
 
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 
-// Empresas más grandes de Perú
+// Empresas más grandes de Perú — logos reales verificados contra empliq_dev
 const logos = [
-  { name: 'BCP', letter: 'BCP' },
-  { name: 'Interbank', letter: 'IB' },
-  { name: 'BBVA', letter: 'BB' },
-  { name: 'Alicorp', letter: 'AL' },
-  { name: 'Backus', letter: 'BK' },
-  { name: 'Belcorp', letter: 'BC' },
-  { name: 'Rímac', letter: 'RM' },
-  { name: 'Pacífico', letter: 'PC' },
-  { name: 'Gloria', letter: 'GL' },
-  { name: 'Telefónica', letter: 'TF' },
+  { name: 'BCP', src: '/logos/bcp.png' },
+  { name: 'Interbank', src: '/logos/interbank.png' },
+  { name: 'BBVA', src: '/logos/bbva.png' },
+  { name: 'Alicorp', src: '/logos/alicorp.png' },
+  { name: 'Backus', src: '/logos/backus.png' },
+  { name: 'Falabella', src: '/logos/falabella.png' },
+  { name: 'Rímac', src: '/logos/rimac.png' },
+  { name: 'Pacífico', src: '/logos/pacifico.png' },
+  { name: 'Gloria', src: '/logos/gloria.png' },
+  { name: 'Telefónica', src: '/logos/telefonica.png' },
 ]
 
 export function LogoCloud() {
@@ -56,8 +57,14 @@ export function LogoCloud() {
               className="flex items-center justify-center mx-12 shrink-0"
             >
               <div className="flex items-center gap-3 text-neutral-400 hover:text-neutral-600 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-neutral-100 border border-neutral-200 flex items-center justify-center">
-                  <span className="font-bold text-sm">{logo.letter}</span>
+                <div className="w-10 h-10 rounded-lg border border-neutral-200/60 bg-white flex items-center justify-center overflow-hidden p-0.5">
+                  <Image
+                    src={logo.src}
+                    alt={logo.name}
+                    width={38}
+                    height={38}
+                    className="object-contain grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition-all duration-300"
+                  />
                 </div>
                 <span className="font-medium text-lg">{logo.name}</span>
               </div>

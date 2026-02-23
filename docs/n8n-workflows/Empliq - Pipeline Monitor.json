@@ -1,0 +1,183 @@
+{
+  "name": "Empliq - Pipeline Monitor",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "d4756722-02fa-434c-8271-bd69a3bef0ff",
+      "name": "Run Manually",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT\n  COUNT(*) as total_rows,\n  COUNT(CASE WHEN data->>'scrape_status' = 'enriched' THEN 1 END) as enriched,\n  COUNT(CASE WHEN data->>'scrape_status' = 'failed' THEN 1 END) as failed,\n  COUNT(CASE WHEN data->>'scrape_status' = 'failed_retry' THEN 1 END) as failed_retry,\n  COUNT(CASE WHEN data->>'scrape_status' = 'enriched' AND data->>'retry_at' IS NOT NULL THEN 1 END) as fixed_by_retry,\n  COUNT(CASE WHEN data->>'tier' = 'tier1' THEN 1 END) as tier1,\n  COUNT(CASE WHEN data->>'tier' = 'tier2' THEN 1 END) as tier2,\n  COUNT(CASE WHEN data->>'tier' = 'tier3' THEN 1 END) as tier3,\n  MIN(created_at) as started_at,\n  MAX(updated_at) as last_updated,\n  ROUND(AVG((data->>'fields_extracted')::numeric), 1) as avg_fields,\n  ROUND(AVG((data->>'scrape_duration_ms')::numeric)/1000, 1) as avg_sec\nFROM companies_raw\nWHERE source = 'n8n_datosperu_v6';",
+        "options": {}
+      },
+      "id": "e23bfffe-7592-44c9-b1ce-549c26277499",
+      "name": "Query Stats",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social,\n  data->>'scrape_status' as status,\n  data->>'fields_extracted' as fields,\n  data->>'tier' as tier,\n  data->>'nro_trabajadores' as trabajadores,\n  updated_at\nFROM companies_raw\nWHERE source = 'n8n_datosperu_v6'\nORDER BY updated_at DESC\nLIMIT 10;",
+        "options": {}
+      },
+      "id": "107a7d17-494c-41dd-adbe-2581ff62a2d0",
+      "name": "Last 10 Processed",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social,\n  data->>'scrape_status' as status,\n  data->>'scrape_error' as error,\n  data->>'prev_error' as prev_error,\n  data->>'retry_at' as retry_at\nFROM companies_raw\nWHERE source = 'n8n_datosperu_v6'\n  AND data->>'scrape_status' IN ('failed', 'failed_retry')\nORDER BY updated_at DESC\nLIMIT 20;",
+        "options": {}
+      },
+      "id": "96953112-2d7d-4f7e-9984-b4c560e18509",
+      "name": "Failed Companies",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        416
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const stats = $('Query Stats').first().json;\nconst recent = $('Last 10 Processed').all().map(i => i.json);\nconst failures = $('Failed Companies').all().map(i => i.json);\n\nconst total = parseInt(stats.total_rows) || 0;\nconst enriched = parseInt(stats.enriched) || 0;\nconst failed = parseInt(stats.failed) || 0;\nconst failedRetry = parseInt(stats.failed_retry) || 0;\nconst fixedByRetry = parseInt(stats.fixed_by_retry) || 0;\nconst TARGET_TIER1 = 915;\nconst TARGET_TIER2 = 798;\nconst TARGET_TIER3 = 4410;\nconst TARGET_ALL = 6123;\n\nconst t1 = parseInt(stats.tier1) || 0;\nconst t2 = parseInt(stats.tier2) || 0;\nconst t3 = parseInt(stats.tier3) || 0;\n\nconst progress = ((total / TARGET_ALL) * 100).toFixed(1);\nconst totalFailing = failed + failedRetry;\nconst successRate = total > 0 ? (((total - totalFailing) / total) * 100).toFixed(1) : '0';\nconst avgSec = stats.avg_sec || 'N/A';\nconst remaining = TARGET_ALL - total;\nconst etaHours = remaining > 0 ? ((remaining * (parseFloat(avgSec || 5) + 15)) / 3600).toFixed(1) : '0';\n\nreturn { json: {\n  '📊 PIPELINE MONITOR': '════════════════',\n  progress: `${total} / ${TARGET_ALL} (${progress}%)`,\n  enriched,\n  failed_pending: failed,\n  failed_after_retry: failedRetry,\n  fixed_by_retry: fixedByRetry,\n  success_rate: `${successRate}%`,\n  avg_duration: `${avgSec}s per company`,\n  remaining,\n  eta: `~${etaHours} hours`,\n  '📈 BY TIER': '════════════════',\n  tier1: `${t1} / ${TARGET_TIER1} (${((t1/TARGET_TIER1)*100).toFixed(1)}%)`,\n  tier2: `${t2} / ${TARGET_TIER2} (${((t2/TARGET_TIER2)*100).toFixed(1)}%)`,\n  tier3: `${t3} / ${TARGET_TIER3} (${((t3/TARGET_TIER3)*100).toFixed(1)}%)`,\n  '⏱️ TIMING': '════════════════',\n  started_at: stats.started_at || 'N/A',\n  last_updated: stats.last_updated || 'N/A',\n  avg_fields: stats.avg_fields || 'N/A',\n  '📋 LAST 10': '════════════════',\n  recent: recent.map(r => `${r.ruc} | ${(r.razon_social||'').substring(0,35)} | ${r.status} | ${r.fields} fields | ${r.tier}`),\n  '🔄 RETRIES': '════════════════',\n  retry_summary: `${fixedByRetry} fixed | ${failedRetry} still failing | ${failed} pending retry`,\n  '❌ FAILURES': `${totalFailing} total`,\n  failed_list: failures.map(f => `${f.ruc} | ${(f.razon_social||'').substring(0,30)} | ${f.status} | ${f.error || 'no detail'}${f.retry_at ? ' | retried: ' + f.retry_at.substring(0,16) : ''}`)\n}};"
+      },
+      "id": "83fed709-c821-45ac-8c99-105cabdea529",
+      "name": "Format Report",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "3d305501-a8ae-4a39-bc0a-325b82ccd4b0",
+      "name": "Wait All",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        288,
+        144
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Run Manually": {
+      "main": [
+        [
+          {
+            "node": "Query Stats",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Last 10 Processed",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Failed Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Stats": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last 10 Processed": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Failed Companies": {
+      "main": [
+        [
+          {
+            "node": "Wait All",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Wait All": {
+      "main": [
+        [
+          {
+            "node": "Format Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "168364db-b88b-40d0-b071-f44d03456705",
+  "meta": {
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "id": "Pz1y2kiNiShAbVpf",
+  "tags": []
+}

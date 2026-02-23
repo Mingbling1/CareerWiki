@@ -12,11 +12,8 @@ export interface UpdateCompanyInput {
   slug?: string;
   description?: string;
   industry?: string;
-  size?: string;
   location?: string;
   website?: string;
-  culture?: string;
-  benefits?: string[];
   logo?: {
     data: string; // base64
     fileName: string;
@@ -29,11 +26,8 @@ interface CompanyUpdateData {
   slug?: string;
   description?: string;
   industry?: string;
-  size?: string;
   location?: string;
   website?: string;
-  culture?: string;
-  benefits?: string[];
   logoUrl?: string | null;
 }
 
@@ -100,11 +94,8 @@ export class UpdateCompanyUseCase {
       ...(input.slug !== undefined && { slug: input.slug }),
       ...(input.description !== undefined && { description: input.description }),
       ...(input.industry !== undefined && { industry: input.industry }),
-      ...(input.size !== undefined && { size: input.size }),
       ...(input.location !== undefined && { location: input.location }),
       ...(input.website !== undefined && { website: input.website }),
-      ...(input.culture !== undefined && { culture: input.culture }),
-      ...(input.benefits !== undefined && { benefits: input.benefits }),
       ...(newLogoUrl !== undefined && { logoUrl: newLogoUrl }),
     };
 

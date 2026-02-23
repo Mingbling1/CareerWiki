@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import dynamic from 'next/dynamic'
 import { motion } from 'framer-motion'
 
@@ -75,22 +74,37 @@ const floatingCardVariants = {
   }),
 }
 
-// Animated text component
+// Animated text component — groups by word to prevent mid-word line breaks
 function AnimatedHeadline({ text, className }: { text: string; className?: string }) {
+  let charIndex = 0
+  const words = text.split(' ')
+
   return (
     <span className={className}>
-      {text.split('').map((char, i) => (
-        <motion.span
-          key={i}
-          custom={i}
-          variants={letterVariants}
-          initial="hidden"
-          animate="visible"
-          style={{ display: 'inline-block' }}
-        >
-          {char === ' ' ? '\u00A0' : char}
-        </motion.span>
-      ))}
+      {words.map((word, wi) => {
+        const startIndex = charIndex
+        charIndex += word.length + 1 // +1 for the space
+
+        return (
+          <span key={wi} style={{ display: 'inline-flex', whiteSpace: 'nowrap' }}>
+            {word.split('').map((char, ci) => (
+              <motion.span
+                key={ci}
+                custom={startIndex + ci}
+                variants={letterVariants}
+                initial="hidden"
+                animate="visible"
+                style={{ display: 'inline-block' }}
+              >
+                {char}
+              </motion.span>
+            ))}
+            {wi < words.length - 1 && (
+              <span style={{ display: 'inline-block', width: '0.3em' }} />
+            )}
+          </span>
+        )
+      })}
     </span>
   )
 }
@@ -103,12 +117,12 @@ export function Hero() {
   }, [])
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <section className="relative min-h-[80vh] lg:min-h-0 lg:flex-1 flex items-center justify-center overflow-hidden">
       {/* Shader Background - starts after header */}
       {isMounted && (
         <Shader3 
-          className="!fixed !top-16 !h-[calc(100vh+800px)]" 
-          color="#3b82f6"
+          className="!fixed !top-20 !h-[calc(100vh+800px)]" 
+          color="#808080"
         />
       )}
 
@@ -118,7 +132,7 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-8 md:pt-32 pb-24">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-4 md:pt-12 pb-8">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left column - Text */}
           <motion.div
@@ -129,26 +143,26 @@ export function Hero() {
           >
             {/* Badge */}
             <motion.div variants={itemVariants} className="inline-flex self-start">
-              <div className="flex items-center gap-2 bg-blue-600/10 backdrop-blur-sm border border-blue-600/20 rounded-full px-4 py-2">
-                <span className="text-blue-600 font-medium text-sm">Plataforma colaborativa</span>
+              <div className="flex items-center gap-2 bg-neutral-900/10 backdrop-blur-sm border border-neutral-400/30 rounded-full px-4 py-2">
+                <span className="text-neutral-700 font-medium text-sm">Plataforma colaborativa</span>
               </div>
             </motion.div>
 
             {/* Main heading */}
             <motion.h1
               variants={itemVariants}
-              className="text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 leading-[1.1] tracking-tight"
+              className="text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 leading-[1.1] tracking-tight"
             >
-              <AnimatedHeadline text="La transparencia laboral que " />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
-                <AnimatedHeadline text="Perú necesita." />
+              <AnimatedHeadline text="Transparencia laboral" />{' '}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
+                <AnimatedHeadline text="para el Perú." />
               </span>
             </motion.h1>
 
             {/* Description */}
             <motion.p
               variants={itemVariants}
-              className="text-xl text-neutral-600 max-w-lg leading-relaxed"
+              className="text-lg sm:text-xl text-neutral-600 max-w-lg leading-relaxed"
             >
               Empliq es la plataforma open-source donde profesionales comparten información real 
               sobre salarios, puestos y estructuras organizacionales.
@@ -156,15 +170,15 @@ export function Hero() {
 
             {/* CTA Buttons */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
-              <Link
-                href="/registro"
+              <a
+                href="http://localhost:5173"
                 className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-neutral-800 transition-all hover:gap-3"
               >
-                Comenzar gratis
+                Explorar empresas
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>
-              </Link>
+              </a>
             </motion.div>
           </motion.div>
 
@@ -220,7 +234,7 @@ export function Hero() {
                         <p className="text-neutral-900 text-sm font-medium">{job.title}</p>
                         <p className="text-neutral-500 text-xs">{job.company}</p>
                       </div>
-                      <span className="text-blue-600 font-mono text-sm">{job.salary}</span>
+                      <span className="text-neutral-900 font-mono text-sm font-semibold">{job.salary}</span>
                     </div>
                   ))}
                 </div>
@@ -236,7 +250,7 @@ export function Hero() {
               className="absolute -left-8 top-1/4 bg-white backdrop-blur-lg border border-neutral-200 rounded-xl p-4 shadow-xl hidden lg:block"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-600 flex items-center justify-center text-white font-bold">
                   +
                 </div>
                 <div>
@@ -254,7 +268,7 @@ export function Hero() {
               className="absolute -right-4 bottom-1/4 bg-white backdrop-blur-lg border border-neutral-200 rounded-xl p-4 shadow-xl hidden lg:block"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-500 flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>

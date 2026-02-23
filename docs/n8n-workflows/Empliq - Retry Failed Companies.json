@@ -1,0 +1,338 @@
+{
+  "name": "Empliq - Retry Failed Companies",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "a6176086-e964-4340-949f-d561272cae6c",
+      "name": "Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social, data->>'tier' as tier, data->>'scrape_error' as prev_error\nFROM companies_raw\nWHERE source = 'n8n_datosperu_v6'\n  AND data->>'scrape_status' IN ('failed', 'failed_retry')\nORDER BY updated_at ASC;",
+        "options": {}
+      },
+      "id": "afddaf94-0396-4ff9-a909-cfabdb9edcf3",
+      "name": "Get Failed RUCs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        192,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst count = items.length;\n\nif (count === 0) {\n  console.log('✅ No failed companies to retry!');\n  return [];\n}\n\nconsole.log(`🔄 Retrying ${count} failed companies...`);\nreturn items;"
+      },
+      "id": "b6bac99a-f523-4a33-9356-4842f01ef932",
+      "name": "Check if Any Failed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "b7a3ca41-8328-4756-a464-e921fb26f747",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        528,
+        -192
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/enrich/datosperu?ruc={{ $json.ruc }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "c0bb3db2-2a44-41da-b685-816c7295e306",
+      "name": "Retry Enrich",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        768,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prev = $('Loop Items').first().json;\nconst dp = $input.first().json;\nconst dpOk = dp.success === true;\n\n// Capture real error info from HTTP response\nlet errorMsg = null;\nif (!dpOk) {\n  errorMsg = dp.error || dp.message || dp.statusMessage || 'Unknown error on retry';\n  if (dp.code) errorMsg = `[${dp.code}] ${errorMsg}`;\n}\n\nconst data = {\n  name: dpOk ? (dp.nombre || prev.razon_social) : prev.razon_social,\n  estado: dpOk ? (dp.estado || 'ACTIVO') : 'ACTIVO',\n  condicion: 'HABIDO',\n  tipo_empresa: dpOk ? (dp.tipo || null) : null,\n  actividad_ciiu: dpOk ? (dp.ciiu || null) : null,\n  sector_economico: dpOk ? (dp.sectorEconomico || null) : null,\n  comercio_exterior: dpOk ? (dp.marcaComercioExterior || null) : null,\n  direccion: dpOk ? (dp.direccion || null) : null,\n  referencia: dpOk ? (dp.referencia || null) : null,\n  departamento: dpOk ? (dp.departamento || null) : null,\n  provincia: dpOk ? (dp.provincia || null) : null,\n  distrito: dpOk ? (dp.distrito || null) : null,\n  telefonos: dpOk && dp.telefonos ? dp.telefonos : [],\n  website: dpOk ? (dp.web || null) : null,\n  description: dpOk ? (dp.descripcion || null) : null,\n  logo_url: dpOk ? (dp.logoUrl || null) : null,\n  fecha_inicio: dpOk ? (dp.fechaInicio || null) : null,\n  fecha_inscripcion: dpOk ? (dp.fechaInscripcion || null) : null,\n  proveedor_estado: dpOk ? dp.proveedorEstado : false,\n  ejecutivos: dpOk ? (dp.ejecutivos || []) : [],\n  establecimientos_anexos: dpOk ? (dp.establecimientosAnexos || []) : [],\n  historial_trabajadores: dpOk ? (dp.historialTrabajadores || []) : [],\n  historial_condiciones: dpOk ? (dp.historialCondiciones || []) : [],\n  historial_direcciones: dpOk ? (dp.historialDirecciones || []) : [],\n  tier: prev.tier || 'tier1',\n  source_url: dpOk ? (dp.sourceUrl || null) : null,\n  fields_extracted: dpOk ? dp.fieldsExtracted : 0,\n  scrape_duration_ms: dpOk ? dp.durationMs : 0,\n  scrape_status: dpOk ? 'enriched' : 'failed_retry',\n  scrape_error: errorMsg,\n  prev_error: prev.prev_error || null,\n  retry_at: new Date().toISOString(),\n  scraped_at: new Date().toISOString()\n};\n\nconst status = dpOk ? '✅ FIXED' : '❌ STILL FAILING';\nconsole.log(`${status} ${prev.ruc} | ${prev.razon_social} | ${dpOk ? dp.fieldsExtracted + ' fields' : errorMsg}`);\n\nreturn { json: {\n  ruc: prev.ruc,\n  razon_social: dpOk ? (dp.nombre || prev.razon_social) : prev.razon_social,\n  data: data,\n  source: 'n8n_datosperu_v6',\n  updated_at: new Date().toISOString()\n}};"
+      },
+      "id": "d279648a-4ffd-4bc0-a36a-1b9784792a9d",
+      "name": "Build Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "name",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "companies_raw"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "ruc"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ruc",
+              "displayName": "ruc",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "razon_social",
+              "displayName": "razon_social",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "d8478dee-1863-4475-b546-1ad96e844ab7",
+      "name": "Upsert to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1200,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 20
+      },
+      "id": "e37f8c79-a9a7-4801-911c-24466716ae98",
+      "name": "Wait 20s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        0
+      ],
+      "webhookId": "wait-retry"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Failed RUCs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Failed RUCs": {
+      "main": [
+        [
+          {
+            "node": "Check if Any Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check if Any Failed": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Retry Enrich",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry Enrich": {
+      "main": [
+        [
+          {
+            "node": "Build Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Record": {
+      "main": [
+        [
+          {
+            "node": "Upsert to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to DB": {
+      "main": [
+        [
+          {
+            "node": "Wait 20s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 20s": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "8035a51e-1198-4222-98ed-1b549f938370",
+  "meta": {
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "id": "OJJxwLBG9cJtFlwV",
+  "tags": []
+}

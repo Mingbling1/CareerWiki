@@ -131,7 +131,7 @@ function NavigationMenuLink({
     <NavigationMenuPrimitive.Link
       data-slot="navigation-menu-link"
       className={cn(
-        "data-[active=true]:bg-white/10 data-[active=true]:text-white hover:bg-white/5 hover:text-white focus:bg-white/5 focus:text-white block select-none rounded-sm px-3 py-2 leading-none no-underline outline-none transition-colors",
+        "data-[active=true]:bg-neutral-100 data-[active=true]:text-neutral-900 hover:bg-neutral-100 hover:text-neutral-900 focus:bg-neutral-100 focus:text-neutral-900 block select-none rounded-sm px-3 py-2 leading-none no-underline outline-none transition-colors",
         className
       )}
       {...props}

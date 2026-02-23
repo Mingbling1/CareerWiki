@@ -26,23 +26,23 @@ export function Testimonials() {
   return (
     <section className="relative py-24 bg-zinc-950 overflow-hidden">
       {/* Smooth transition glow at bottom */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-neutral-500/20 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black via-zinc-950/80 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-48 bg-[radial-gradient(ellipse_at_bottom,rgba(59,130,246,0.08)_0%,transparent_60%)]" />
+      <div className="absolute inset-x-0 bottom-0 h-48 bg-[radial-gradient(ellipse_at_bottom,rgba(120,120,120,0.08)_0%,transparent_60%)]" />
 
       {/* Background decoration */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(59,130,246,0.1)_0%,transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(120,120,120,0.08)_0%,transparent_70%)]" />
       
 
       <div className="relative max-w-7xl mx-auto px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
-          <p className="text-blue-400 font-medium mb-4 tracking-wider uppercase text-sm">
+          <p className="text-neutral-400 font-medium mb-4 tracking-wider uppercase text-sm">
             Testimonios
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
             De Fortune 500 a startups,{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-200 to-neutral-500">
               Empliq es la respuesta.
             </span>
           </h2>
@@ -57,7 +57,7 @@ export function Testimonials() {
             >
               {/* Quote icon */}
               <svg
-                className="w-10 h-10 text-blue-500/30 mb-6"
+                className="w-10 h-10 text-neutral-500/30 mb-6"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
@@ -71,7 +71,7 @@ export function Testimonials() {
 
               {/* Author */}
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-neutral-700 to-neutral-500 flex items-center justify-center text-white font-bold">
                   {testimonial.avatar}
                 </div>
                 <div>

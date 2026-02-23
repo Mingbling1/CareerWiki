@@ -91,7 +91,7 @@ const features = [
 
 export function Features() {
   return (
-    <section className="relative py-24 bg-gradient-to-b from-neutral-50 via-white to-white">
+    <section className="relative py-24 bg-gradient-to-b from-neutral-50 via-white to-white border-t border-neutral-200">
       {/* Section header */}
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <motion.div
@@ -101,12 +101,12 @@ export function Features() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <p className="text-blue-600 font-medium mb-4 tracking-wider uppercase text-sm">
+          <p className="text-neutral-500 font-medium mb-4 tracking-wider uppercase text-sm">
             Por qué Empliq
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
             Estamos construyendo{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
               algo mejor.
             </span>
           </h2>
@@ -135,12 +135,12 @@ export function Features() {
 
                 <div className="relative">
                   {/* Icon - Colorful on hover */}
-                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-600 mb-5 group-hover:bg-blue-50 group-hover:text-blue-600 group-hover:border-blue-100 transition-colors">
+                  <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-neutral-600 mb-5 group-hover:bg-neutral-900 group-hover:text-white group-hover:border-neutral-800 transition-colors">
                     {feature.icon}
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-semibold text-neutral-900 mb-3 group-hover:text-blue-600 transition-colors">
+                  <h3 className="text-xl font-semibold text-neutral-900 mb-3 group-hover:text-neutral-700 transition-colors">
                     {feature.title}
                   </h3>
                   <p className="text-neutral-500 leading-relaxed">

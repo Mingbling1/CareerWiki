@@ -4,8 +4,24 @@
 
 import { Company } from '../entities/company.entity';
 
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FindAllOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  industry?: string;
+  location?: string;
+}
+
 export interface ICompanyRepository {
-  findAll(): Promise<Company[]>;
+  findAll(options?: FindAllOptions): Promise<PaginatedResult<Company>>;
   findById(id: string): Promise<Company | null>;
   findBySlug(slug: string): Promise<Company | null>;
   create(company: Partial<Company>): Promise<Company>;

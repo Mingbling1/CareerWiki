@@ -1,0 +1,294 @@
+{
+  "name": "Empliq - Logo Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "id": "logo-trigger-001",
+      "name": "Every 2 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-448, 112]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc, razon_social, data->>'website' AS website, data->>'name' AS nombre_comercial FROM companies_raw WHERE logo_bucket_url IS NULL AND (data->>'scrape_status' = 'enriched' OR data->>'scrape_status' IS NULL) ORDER BY (data->>'nro_trabajadores')::int DESC NULLS LAST LIMIT 100;",
+        "options": {}
+      },
+      "id": "logo-get-pending-001",
+      "name": "Get Pending Companies",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [-224, 112],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (items.length === 0) {\n  console.log('✅ No hay empresas pendientes de logo.');\n  return [];\n}\n\nconsole.log(`🖼️ ${items.length} empresas pendientes de logo`);\n\nreturn items.map(item => {\n  const ruc = String(item.json.ruc || '').trim();\n  const razonSocial = String(item.json.razon_social || '').trim();\n  let website = String(item.json.website || '').trim();\n  const nombreComercial = String(item.json.nombre_comercial || razonSocial).trim();\n\n  // Limpiar website: quitar protocolo, www, trailing slash\n  let domain = '';\n  if (website && website !== 'null' && website !== '') {\n    domain = website\n      .replace(/^https?:\\/\\//, '')\n      .replace(/^www\\./, '')\n      .replace(/\\/+$/, '')\n      .toLowerCase();\n  }\n\n  // Limpiar nombre: quitar sufijos legales comunes para mejor match en logo.dev\n  let cleanName = nombreComercial\n    .replace(/\\s+(S\\.?A\\.?C?\\.?|S\\.?R\\.?L\\.?|E\\.?I\\.?R\\.?L\\.?|S\\.?A\\.?)\\s*$/i, '')\n    .trim();\n\n  return {\n    json: {\n      ruc,\n      razonSocial,\n      domain,\n      cleanName,\n      hasDomain: domain.length > 0\n    }\n  };\n});"
+      },
+      "id": "logo-prepare-001",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [0, 112]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "logo-loop-001",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [224, 112]
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/logo/fetch?{{ $json.hasDomain ? 'domain=' + encodeURIComponent($json.domain) + '&' : '' }}name={{ encodeURIComponent($json.cleanName) }}&ruc={{ $json.ruc }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "logo-fetch-001",
+      "name": "Fetch Logo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [448, 112],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Loop Items').first().json;\nconst logo = $input.first().json;\n\nconst ruc = prep.ruc;\nconst success = logo.success === true;\nconst bucketUrl = success ? logo.bucketUrl : null;\nconst provider = logo.provider || 'none';\nconst sizeBytes = logo.sizeBytes || 0;\nconst durationMs = logo.durationMs || 0;\nconst error = logo.error || null;\n\nif (success) {\n  console.log(`✅ ${ruc} | ${prep.razonSocial} | ${provider} | ${sizeBytes} bytes | ${durationMs}ms`);\n} else {\n  console.log(`❌ ${ruc} | ${prep.razonSocial} | ${error}`);\n}\n\nreturn {\n  json: {\n    ruc,\n    logo_bucket_url: bucketUrl,\n    success,\n    provider,\n    error\n  }\n};"
+      },
+      "id": "logo-process-001",
+      "name": "Process Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [672, 112]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "logo-if-success",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "logo-if-001",
+      "name": "Logo Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [896, 112]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE companies_raw SET logo_bucket_url = '{{ $json.logo_bucket_url }}', updated_at = NOW() WHERE ruc = '{{ $json.ruc }}';",
+        "options": {}
+      },
+      "id": "logo-update-db-001",
+      "name": "Update DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 0],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 2
+      },
+      "id": "logo-wait-success-001",
+      "name": "Wait 2s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1344, 0],
+      "webhookId": "logo-wait-ok"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "id": "logo-wait-fail-001",
+      "name": "Wait 1s (Failed)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1120, 224],
+      "webhookId": "logo-wait-fail"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 2 Hours": {
+      "main": [
+        [
+          {
+            "node": "Get Pending Companies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pending Companies": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Fetch Logo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Logo": {
+      "main": [
+        [
+          {
+            "node": "Process Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Result": {
+      "main": [
+        [
+          {
+            "node": "Logo Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Logo Found?": {
+      "main": [
+        [
+          {
+            "node": "Update DB",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait 1s (Failed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update DB": {
+      "main": [
+        [
+          {
+            "node": "Wait 2s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 2s": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 1s (Failed)": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "logo-pipeline-v1",
+  "meta": {
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "id": "logo-pipeline-v1",
+  "tags": []
+}
