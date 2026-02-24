@@ -27,5 +27,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/tu-usuario/empliq"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.97.0"
   }
 }

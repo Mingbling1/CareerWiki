@@ -5,7 +5,13 @@ EMPLIQ — Data Migration Script (Python)
 ============================================
 
 Migra datos de empresas desde empliq_dev (Oracle server)
-a empliq o empliq_pre_prod (PostgreSQL local via Docker).
+a empliq_pre_prod o empliq_prod.
+
+Modos:
+  --mode=local   (default) SSH tunnel desde tu máquina local a Oracle,
+                 escribe en PostgreSQL local (empliq-postgres Docker)
+  --mode=oracle  Ejecutar DESDE el servidor Oracle. Ambas BDs accesibles
+                 via red Docker (musuq-postgres → empliq-postgres)
 
 Features:
   - Incremental: solo migra empresas no existentes en el destino
@@ -13,18 +19,24 @@ Features:
   - Idempotente: seguro para ejecutar múltiples veces
   - Logo-aware: mapea logo_bucket_url cuando está disponible
   - Genera slugs desde nombres de empresa
-  - Conexión SSH directa (sin shells anidados)
 
 Uso:
-  python3 migrate_companies.py                       # → empliq_pre_prod (default)
-  python3 migrate_companies.py --target=empliq       # → producción
+  # Desde local (SSH tunnel a Oracle, escribe en Docker local)
+  python3 migrate_companies.py --target=empliq_pre_prod
+  python3 migrate_companies.py --target=empliq_prod
+
+  # Desde Oracle server (ambas BDs en Docker network)
+  python3 migrate_companies.py --mode=oracle --target=empliq_pre_prod
+  python3 migrate_companies.py --mode=oracle --target=empliq_prod
+
+  # Otros
   python3 migrate_companies.py --limit=100           # primeras 100 empresas
   python3 migrate_companies.py --dry-run             # preview, sin escritura
   python3 migrate_companies.py --update-logos        # solo actualizar logos
   python3 migrate_companies.py --stats               # mostrar estadísticas
 
 Dependencias:
-  pip install psycopg2-binary sshtunnel
+  pip install psycopg2-binary
 """
 
 import argparse
@@ -51,11 +63,21 @@ ORACLE_DB_PASS = "postgres123"
 ORACLE_PG_PORT = 5432  # Port inside the Docker container
 ORACLE_DOCKER_IP = "172.19.0.2"  # musuq-postgres container IP on Docker network
 
-# Local Docker PostgreSQL (exposed on host)
+# Target PostgreSQL — Local Docker (default) or Oracle empliq-postgres
 LOCAL_DB_USER = os.getenv("LOCAL_DB_USER", "empliq")
 LOCAL_DB_PASS = os.getenv("LOCAL_DB_PASS", "empliq_dev_password")
 LOCAL_DB_HOST = os.getenv("LOCAL_DB_HOST", "localhost")
 LOCAL_DB_PORT = int(os.getenv("LOCAL_DB_PORT", "5432"))
+
+# Oracle mode: target DBs (empliq_prod, empliq_pre_prod) live in musuq-postgres too
+# Same container, different databases — no separate PostgreSQL needed
+ORACLE_TARGET_DB_HOST = os.getenv("ORACLE_TARGET_DB_HOST", "musuq-postgres")
+ORACLE_TARGET_DB_USER = os.getenv("ORACLE_TARGET_DB_USER", "postgres")
+ORACLE_TARGET_DB_PASS = os.getenv("ORACLE_TARGET_DB_PASS", "postgres123")
+ORACLE_TARGET_DB_PORT = int(os.getenv("ORACLE_TARGET_DB_PORT", "5432"))
+
+# Oracle mode: source (musuq-postgres on same Docker network)
+ORACLE_SOURCE_DB_HOST = os.getenv("ORACLE_SOURCE_DB_HOST", "musuq-postgres")
 
 BATCH_SIZE = 500
 
@@ -140,6 +162,34 @@ def connect_local(db_name: str):
     )
 
 
+def connect_oracle_source_direct():
+    """Connect to source DB (musuq-postgres) on same Docker network.
+    Used in --mode=oracle when running on the Oracle server itself.
+    """
+    return psycopg2.connect(
+        host=ORACLE_SOURCE_DB_HOST,
+        port=ORACLE_PG_PORT,
+        dbname=ORACLE_DB_NAME,
+        user=ORACLE_DB_USER,
+        password=ORACLE_DB_PASS,
+        connect_timeout=10,
+    )
+
+
+def connect_oracle_target(db_name: str):
+    """Connect to target DB (empliq_prod/empliq_pre_prod) on musuq-postgres.
+    Same PostgreSQL container, different database. Used in --mode=oracle.
+    """
+    return psycopg2.connect(
+        host=ORACLE_TARGET_DB_HOST,
+        port=ORACLE_TARGET_DB_PORT,
+        dbname=db_name,
+        user=ORACLE_TARGET_DB_USER,
+        password=ORACLE_TARGET_DB_PASS,
+        connect_timeout=10,
+    )
+
+
 # ============================================
 # Stats
 # ============================================
@@ -162,7 +212,7 @@ def show_stats(oracle_conn, target_db: str):
     print(f"   Enriched (migratable):   {enriched:,}")
     print(f"   With logo:               {with_logo}")
 
-    for db in ["empliq", "empliq_pre_prod"]:
+    for db in ["empliq_pre_prod", "empliq_prod"]:
         try:
             local_conn = connect_local(db)
             with local_conn.cursor() as cur:
@@ -486,11 +536,14 @@ def migrate(oracle_conn, target_db: str, limit: int | None, dry_run: bool):
 # ============================================
 def main():
     parser = argparse.ArgumentParser(
-        description="EMPLIQ — Data Migration (empliq_dev → local Postgres)"
+        description="EMPLIQ — Data Migration (empliq_dev → empliq_pre_prod/empliq_prod)"
     )
     parser.add_argument("--target", default="empliq_pre_prod",
-                        choices=["empliq", "empliq_pre_prod"],
+                        choices=["empliq_pre_prod", "empliq_prod"],
                         help="Target database (default: empliq_pre_prod)")
+    parser.add_argument("--mode", default="local",
+                        choices=["local", "oracle"],
+                        help="local = SSH tunnel + local PG; oracle = same Docker network")
     parser.add_argument("--limit", type=int, default=None,
                         help="Limit number of companies to migrate")
     parser.add_argument("--dry-run", action="store_true",
@@ -506,17 +559,35 @@ def main():
     print()
     print("╔══════════════════════════════════════════════╗")
     print("║  EMPLIQ — Data Migration Tool (Python)       ║")
-    print("║  empliq_dev (Oracle) → local Postgres        ║")
+    print(f"║  Mode: {args.mode:<8} Target: {args.target:<20}║")
     print("╚══════════════════════════════════════════════╝")
 
-    # Connect to Oracle via SSH tunnel
-    print("\n🔌 Connecting to Oracle server via SSH tunnel...")
-    try:
-        tunnel, oracle_conn = connect_oracle_via_ssh()
-    except Exception as e:
-        print(f"❌ Could not connect to Oracle: {e}")
-        sys.exit(1)
-    print("   ✅ Connected to empliq_dev")
+    tunnel = None
+    oracle_conn = None
+
+    if args.mode == "oracle":
+        # Oracle mode: both DBs accessible on Docker network
+        print("\n🔌 Connecting to musuq-postgres (Docker network)...")
+        try:
+            oracle_conn = connect_oracle_source_direct()
+        except Exception as e:
+            print(f"❌ Could not connect to source DB: {e}")
+            sys.exit(1)
+        print("   ✅ Connected to empliq_dev (musuq-postgres)")
+
+        # Override connect_local to use oracle target
+        global connect_local
+        _original_connect_local = connect_local
+        connect_local = connect_oracle_target
+    else:
+        # Local mode: SSH tunnel to Oracle, write to local Docker PG
+        print("\n🔌 Connecting to Oracle server via SSH tunnel...")
+        try:
+            tunnel, oracle_conn = connect_oracle_via_ssh()
+        except Exception as e:
+            print(f"❌ Could not connect to Oracle: {e}")
+            sys.exit(1)
+        print("   ✅ Connected to empliq_dev")
 
     try:
         if args.stats:
@@ -526,24 +597,27 @@ def main():
         else:
             if args.reset:
                 print(f"\n🗑️  Resetting {args.target}...")
-                local_conn = connect_local(args.target)
-                with local_conn.cursor() as cur:
-                    cur.execute("DELETE FROM benefits")
-                    cur.execute("DELETE FROM salaries")
-                    cur.execute("DELETE FROM reviews")
-                    cur.execute("DELETE FROM interviews")
-                    cur.execute("DELETE FROM positions")
+                target_conn = connect_local(args.target)
+                with target_conn.cursor() as cur:
+                    # Safely delete tables that exist
+                    for table in ["benefits", "salaries", "reviews", "interviews", "positions"]:
+                        try:
+                            cur.execute(f"DELETE FROM {table}")
+                        except Exception:
+                            target_conn.rollback()
                     cur.execute("DELETE FROM companies")
-                    cur.execute(f"DELETE FROM _migration_log WHERE target_db = %s", (args.target,))
-                    local_conn.commit()
-                local_conn.close()
+                    cur.execute("DELETE FROM _migration_log WHERE target_db = %s", (args.target,))
+                    target_conn.commit()
+                target_conn.close()
                 print(f"   ✅ Cleared all data in {args.target}")
             migrate(oracle_conn, args.target, args.limit, args.dry_run)
     finally:
         oracle_conn.close()
-        tunnel.terminate()
-        tunnel.wait()
-        print("🔌 SSH tunnel closed.\n")
+        if tunnel:
+            tunnel.terminate()
+            tunnel.wait()
+            print("🔌 SSH tunnel closed.")
+        print()
 
 
 if __name__ == "__main__":

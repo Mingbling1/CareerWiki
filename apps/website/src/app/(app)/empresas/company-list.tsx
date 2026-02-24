@@ -69,7 +69,7 @@ export function CompanyList() {
             placeholder="Buscar empresa, industria o RUC..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-9 bg-muted/50 border-0 focus-visible:ring-1"
           />
         </div>
       </div>
@@ -106,7 +106,7 @@ export function CompanyList() {
             <Link
               key={company.id}
               href={`/empresas/${company.slug}`}
-              className="group rounded-xl bg-card p-5 hover:shadow-md transition-all hover:bg-muted/30"
+              className="group rounded-xl border border-border/40 bg-card p-5 hover:shadow-md transition-all hover:bg-muted/30"
             >
               <div className="flex items-start gap-4">
                 {/* Logo */}

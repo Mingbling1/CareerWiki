@@ -6,7 +6,7 @@ export function EmpliqLogo({ className = 'h-[30px] w-auto' }: EmpliqLogoProps) {
   return (
     <svg 
       className={className}
-      viewBox="140 220 760 240"
+      viewBox="138 218 760 240"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >

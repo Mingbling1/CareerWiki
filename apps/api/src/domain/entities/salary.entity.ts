@@ -6,7 +6,7 @@ export class Salary {
   constructor(
     public readonly id: string,
     public readonly positionId: string,
-    public readonly userId: string, // Stored but not exposed publicly
+    public readonly profileId: string, // Stored but not exposed publicly
     public readonly amount: number,
     public readonly currency: string,
     public readonly period: string, // 'monthly' | 'annual'
@@ -19,7 +19,7 @@ export class Salary {
     return new Salary(
       props.id || '',
       props.positionId || '',
-      props.userId || '',
+      props.profileId || '',
       props.amount || 0,
       props.currency || 'PEN',
       props.period || 'monthly',

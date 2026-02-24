@@ -11,28 +11,32 @@ graph TB
     subgraph "Docker Compose (dev)"
         PG[(PostgreSQL 16<br/>:5432)]
         API[NestJS API<br/>:4000]
-        FE[React + Vite<br/>:5173]
         WEB[Next.js Website<br/>:3000]
         SCR[Scraper API<br/>:3457]
+        KONG[Kong Gateway<br/>:8000]
+        AUTH[GoTrue Auth<br/>:9999]
     end
 
     USER((Usuario)) --> WEB
-    USER --> FE
-    FE --> API
+    WEB --> API
+    WEB --> KONG
+    KONG --> AUTH
+    AUTH --> PG
     API --> PG
     SCR --> PG
-    WEB -.-> API
 
     subgraph "Externo"
         OCI[Oracle Object Storage]
         DP[datosperu.org]
         N8N[n8n Workflows]
+        GOOGLE[Google OAuth]
     end
 
     API --> OCI
     SCR --> DP
     N8N --> SCR
     N8N --> PG
+    AUTH --> GOOGLE
 ```
 
 ---
@@ -44,7 +48,7 @@ graph LR
     subgraph "Infrastructure Layer"
         HTTP[HTTP Controllers]
         PRISMA[Prisma Repositories]
-        AUTH[Better Auth]
+        AUTH[Supabase Auth Guard]
         STORE[Oracle Storage]
     end
 
@@ -170,7 +174,8 @@ erDiagram
 | Backend | NestJS | 11.x | API REST (hexagonal) |
 | ORM | Prisma | 6.x | Abstracción DB |
 | Base de datos | PostgreSQL | 16.x | Persistencia |
-| Auth | Better Auth | - | Sesiones + OAuth |
+| Auth | Supabase GoTrue | v2.158.1 | Google OAuth self-hosted |
+| API Gateway | Kong | 2.8.1 | Proxy /auth/v1/* → GoTrue |
 | Storage | Oracle Object Storage | - | Logos, archivos |
 | Scraper | NestJS microservice | - | DatosPeru enrichment |
 | Automatización | n8n | - | Pipelines de datos |
@@ -187,7 +192,7 @@ Las decisiones técnicas importantes están documentadas como ADRs en [`decision
 | ADR | Decisión |
 |-----|----------|
 | [001](./decisions/001-hexagonal-architecture.md) | Arquitectura hexagonal para API y Scraper |
-| [002](./decisions/002-better-auth.md) | Better Auth sobre Passport/Supabase Auth |
+| [002](./decisions/002-better-auth.md) | Supabase Self-Hosted (GoTrue) para Auth |
 | [003](./decisions/003-dual-database-jsonb.md) | Dual DB: JSONB para scraper, Prisma para app |
 | [004](./decisions/004-datosperu-only-pipeline.md) | Pipeline solo DatosPeru (sin búsqueda web) |
 | [005](./decisions/005-monochromatic-design.md) | Diseño monocromático para website |

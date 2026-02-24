@@ -77,7 +77,7 @@ Se migró la app React (Vite) al website Next.js. Razón: **SEO crítico** para 
 | Capa | Tecnología |
 |------|------------|
 | **Frontend** | Next.js 16 + TailwindCSS 4 + shadcn/ui |
-| **Auth** | Better Auth (Google OAuth + Email/Password) |
+| **Auth** | Supabase Auth Self-Hosted (Google OAuth) |
 | **Backend** | NestJS (Arquitectura Hexagonal) |
 | **Base de datos** | PostgreSQL + Prisma ORM |
 | **Scraper** | NestJS microservice (HTTP puro) |
@@ -189,7 +189,7 @@ python3 scripts/migrate_companies.py --update-logos
 ### Entidades Principales (Prisma)
 
 ```
-User (Better Auth) ──┐
+Profile (Supabase Auth) ──┐
                      ├── Salary    → position_id, amount, currency, period
                      ├── Review    → company_id, position_id?, rating, pros, cons
                      └── Interview → position_id, process, questions, difficulty

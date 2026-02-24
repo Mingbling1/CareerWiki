@@ -42,11 +42,11 @@ export class SalariesController {
     @Param('positionId') positionId: string,
     @Body() dto: AddSalaryDto,
   ) {
-    // TODO: Get userId from JWT token
-    const userId = 'temp-user-id';
+    // TODO: Get profileId from authenticated user (@CurrentUser)
+    const profileId = 'temp-profile-id';
     return this.addSalary.execute({
       positionId,
-      userId,
+      profileId,
       amount: dto.amount,
       currency: dto.currency || 'PEN',
       period: dto.period || 'monthly',

@@ -6,7 +6,7 @@ export class Interview {
   constructor(
     public readonly id: string,
     public readonly positionId: string,
-    public readonly userId: string, // Stored but not exposed publicly
+    public readonly profileId: string, // Stored but not exposed publicly
     public readonly process: string | null,
     public readonly questions: string[],
     public readonly difficulty: string | null, // 'easy' | 'medium' | 'hard' | 'very_hard'
@@ -20,7 +20,7 @@ export class Interview {
     return new Interview(
       props.id || '',
       props.positionId || '',
-      props.userId || '',
+      props.profileId || '',
       props.process || null,
       props.questions || [],
       props.difficulty || null,
@@ -32,8 +32,8 @@ export class Interview {
   }
 
   // Returns anonymous version for public display
-  toAnonymous(): Omit<Interview, 'userId'> {
-    const { userId, ...anonymous } = this;
-    return anonymous as Omit<Interview, 'userId'>;
+  toAnonymous(): Omit<Interview, 'profileId'> {
+    const { profileId, ...anonymous } = this;
+    return anonymous as Omit<Interview, 'profileId'>;
   }
 }

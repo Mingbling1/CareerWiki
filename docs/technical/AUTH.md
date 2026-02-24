@@ -1,14 +1,14 @@
 # Empliq - Autenticación
 
-> Guía de implementación de autenticación con Better Auth.
+> Guía de implementación de autenticación con Supabase Self-Hosted (GoTrue).
 
-## 📋 Índice
+## Índice
 
 1. [Arquitectura de Auth](#arquitectura-de-auth)
-2. [Configuración de Better Auth](#configuración-de-better-auth)
-3. [Implementación en NestJS](#implementación-en-nestjs)
-4. [Implementación en React](#implementación-en-react)
-5. [Proveedores de Autenticación](#proveedores-de-autenticación)
+2. [Configuración Docker](#configuración-docker)
+3. [Implementación en Next.js](#implementación-en-nextjs)
+4. [Implementación en NestJS](#implementación-en-nestjs)
+5. [Flujo de Google OAuth](#flujo-de-google-oauth)
 
 ---
 
@@ -16,359 +16,324 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         FLUJO DE AUTH                               │
+│                      FLUJO DE AUTH (Supabase)                       │
 │                                                                     │
 │  Usuario                                                            │
 │     │                                                               │
-│     │ 1. Click "Login con Email" o "Login con Google"              │
+│     │ 1. Click "Continuar con Google"                              │
 │     ▼                                                               │
 │  ┌─────────────┐                                                   │
-│  │   React     │                                                   │
-│  │   (SPA)     │                                                   │
+│  │  Next.js    │ 2. supabase.auth.signInWithOAuth({ provider:     │
+│  │  (Website)  │    'google', redirectTo: '/auth/callback' })      │
 │  └──────┬──────┘                                                   │
 │         │                                                          │
-│         │ 2. authClient.signIn.email() o signIn.social()          │
+│         │ 3. Redirect a Google → Callback a GoTrue                │
 │         ▼                                                          │
 │  ┌─────────────────┐                                               │
-│  │    NestJS       │                                               │
-│  │  /api/auth/*    │──── Better Auth Handler                      │
+│  │   Kong :8000    │── proxy ──→ /auth/v1/* ──→ GoTrue :9999      │
 │  └────────┬────────┘                                               │
 │           │                                                        │
-│           │ 3. Valida credenciales o redirect OAuth               │
+│           │ 4. GoTrue crea/actualiza auth.users                   │
 │           ▼                                                        │
 │  ┌─────────────────┐                                               │
 │  │   PostgreSQL    │                                               │
-│  │  (users,        │                                               │
-│  │   sessions,     │                                               │
-│  │   accounts)     │                                               │
+│  │  auth.users     │ (GoTrue managed)                             │
+│  │  public.profiles│ (Prisma managed)                             │
 │  └────────┬────────┘                                               │
 │           │                                                        │
-│           │ 4. Devuelve session token                             │
+│           │ 5. Redirect a /auth/callback con code                 │
 │           ▼                                                        │
 │  ┌─────────────┐                                                   │
-│  │   React     │ 5. Cookie de sesión + User data                  │
-│  │   (SPA)     │                                                   │
-│  └─────────────┘                                                   │
+│  │  Next.js    │ 6. exchangeCodeForSession(code)                  │
+│  │  Route      │    → JWT token en cookies httpOnly               │
+│  └──────┬──────┘                                                   │
+│         │                                                          │
+│         │ 7. API calls con Authorization: Bearer <jwt>            │
+│         ▼                                                          │
+│  ┌─────────────────┐                                               │
+│  │    NestJS       │ 8. SupabaseAuthGuard verifica JWT            │
+│  │  API :4000      │    → req.user = Supabase User                │
+│  └─────────────────┘                                               │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Configuración de Better Auth
+## Configuración Docker
 
-### Instalación
+### Servicios necesarios
 
-```bash
-# Backend (NestJS)
-npm install better-auth @prisma/client
-
-# Frontend (React)
-npm install better-auth
-```
+| Servicio | Imagen | Puerto | Propósito |
+|----------|--------|--------|-----------|
+| `postgres` | `postgres:16-alpine` | 5432 | BD con schema `auth` + `public` |
+| `supabase-auth` | `supabase/gotrue:v2.158.1` | 9999 (interno) | OAuth, sesiones, JWT |
+| `supabase-kong` | `kong:2.8.1` | 8000 | API Gateway para auth routing |
+| `supabase-meta` | `supabase/postgres-meta:v0.95.2` | 8080 (interno) | API REST para Postgres (Studio) |
+| `supabase-studio` | `supabase/studio` | 54323 | Dashboard gráfico de Supabase |
 
 ### Variables de Entorno
 
 ```env
-# .env del backend
-BETTER_AUTH_SECRET=your-secret-key-min-32-chars
-BETTER_AUTH_URL=http://localhost:4000
-DATABASE_URL=postgresql://user:password@localhost:5432/empliq
+# .env (docker/)
+JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
+SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+PG_META_CRYPTO_KEY=<clave-de-al-menos-32-caracteres>
+GOOGLE_CLIENT_ID=tu-google-client-id
+GOOGLE_CLIENT_SECRET=tu-google-client-secret
+```
 
-# OAuth Providers (opcional)
-GOOGLE_CLIENT_ID=xxx
-GOOGLE_CLIENT_SECRET=xxx
+> Las keys de demo son para desarrollo local. Generar keys propias para producción.
+
+### Roles de PostgreSQL (requeridos por GoTrue)
+
+GoTrue necesita roles específicos en PostgreSQL. El `init-db.sql` los crea
+automáticamente, siguiendo la guía oficial:
+[supabase.com/docs/guides/self-hosting/docker](https://supabase.com/docs/guides/self-hosting/docker)
+
+| Rol | Tipo | Propósito |
+|-----|------|-----------|
+| `supabase_auth_admin` | LOGIN, SUPERUSER | GoTrue se conecta con este rol |
+| `anon` | NOLOGIN | Claim en JWTs para requests sin autenticar |
+| `authenticated` | NOLOGIN | Claim en JWTs para usuarios autenticados |
+| `service_role` | NOLOGIN, BYPASSRLS | Backend con acceso total |
+| `authenticator` | LOGIN | PostgREST, puede cambiar a los roles anteriores |
+
+**GoTrue DATABASE_URL:**
+```
+postgres://supabase_auth_admin:supabase_auth_admin_password@postgres:5432/empliq
+```
+
+### Supabase Studio
+
+Dashboard gráfico disponible en: **http://localhost:54323**
+
+Requiere los servicios `supabase-meta` y `supabase-studio`.
+Permite gestionar usuarios, tablas, políticas RLS, etc.
+
+---
+
+## Implementación en Next.js
+
+### 1. Cliente Browser (Client Components)
+
+**`/apps/website/src/lib/supabase/client.ts`**
+
+```typescript
+import { createBrowserClient } from "@supabase/ssr"
+
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  )
+}
+```
+
+### 2. Cliente Server (Server Components / Route Handlers)
+
+**`/apps/website/src/lib/supabase/server.ts`**
+
+Usa `createServerClient` con gestión de cookies de Next.js.
+
+### 3. Middleware (Session Refresh)
+
+**`/apps/website/src/middleware.ts`**
+
+Refresca el JWT token automáticamente en cada request.
+
+### 4. Auth Callback
+
+**`/apps/website/src/app/auth/callback/route.ts`**
+
+Intercambia el OAuth code por una session con `exchangeCodeForSession()`.
+
+### 5. Uso en Componentes
+
+```tsx
+"use client"
+import { createClient } from "@/lib/supabase/client"
+
+function LoginButton() {
+  const handleLogin = async () => {
+    const supabase = createClient()
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    })
+  }
+  return <button onClick={handleLogin}>Continuar con Google</button>
+}
 ```
 
 ---
 
 ## Implementación en NestJS
 
-### 1. Configuración del servidor de auth
+### 1. SupabaseService
 
-**`/apps/api/src/infrastructure/auth/auth.ts`**
+Wrapper del client `@supabase/supabase-js` con `SERVICE_ROLE_KEY`.
+Expone `getUser(token)` para verificar JWT tokens.
 
-```typescript
-import { betterAuth } from 'better-auth';
-import { prismaAdapter } from 'better-auth/adapters/prisma';
-import { PrismaClient } from '@prisma/client';
+### 2. SupabaseAuthGuard
 
-const prisma = new PrismaClient();
+NestJS Guard que:
+1. Extrae `Bearer <token>` del header `Authorization`
+2. Verifica el token via `supabase.auth.getUser(token)`
+3. Adjunta el user a `req.user`
 
-export const auth = betterAuth({
-  database: prismaAdapter(prisma, {
-    provider: 'postgresql',
-  }),
-  baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:4000',
-  basePath: '/api/auth',
-  secret: process.env.BETTER_AUTH_SECRET,
-  
-  emailAndPassword: {
-    enabled: true,
-    autoSignIn: true,
-  },
-  
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID || '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    },
-  },
-  
-  session: {
-    expiresIn: 60 * 60 * 24 * 7, // 7 días
-    updateAge: 60 * 60 * 24, // 1 día
-  },
-  
-  trustedOrigins: [
-    'http://localhost:5173',
-    'http://localhost:3000',
-  ],
-});
-```
-
-### 2. Controller de NestJS
-
-**`/apps/api/src/infrastructure/auth/auth.controller.ts`**
+### 3. @CurrentUser() Decorator
 
 ```typescript
-import { Controller, All, Req, Res } from '@nestjs/common';
-import { Request, Response } from 'express';
-import { auth } from './auth';
-import { toNodeHandler } from 'better-auth/node';
-
-@Controller('auth')
-export class AuthController {
-  private handler = toNodeHandler(auth);
-
-  @All('*')
-  async handleAuth(@Req() req: Request, @Res() res: Response) {
-    return this.handler(req, res);
-  }
-}
+@UseGuards(SupabaseAuthGuard)
+@Get('me')
+getMe(@CurrentUser() user) { return user; }
 ```
 
-### 3. Tablas de Base de Datos
+### 4. AuthModule
 
-Better Auth requiere estas tablas (Prisma schema):
+Registrado como `@Global()` — SupabaseService y SupabaseAuthGuard
+disponibles en toda la aplicación sin importar manualmente.
+
+---
+
+## Flujo de Google OAuth
+
+1. **Usuario** → Click "Continuar con Google" en `/login`
+2. **Next.js** → `supabase.auth.signInWithOAuth({ provider: 'google' })`
+3. **Browser** → Redirect a `http://localhost:8000/auth/v1/authorize?provider=google`
+4. **Kong** → Proxy a GoTrue
+5. **GoTrue** → Redirect a Google OAuth consent screen
+6. **Google** → Callback a `http://localhost:8000/auth/v1/callback`
+7. **GoTrue** → Crea/actualiza `auth.users`, genera JWT
+8. **GoTrue** → Redirect a `http://localhost:3000/auth/callback?code=...`
+9. **Next.js Route** → `exchangeCodeForSession(code)` → Cookie de sesión
+10. **Next.js** → Redirect a `/empresas`
+
+### Google Cloud Console Setup
+
+- **Authorized redirect URI**: `http://localhost:8000/auth/v1/callback`
+- **Authorized JavaScript origins**: `http://localhost:3000`
+
+---
+
+## Modelo de Datos
+
+### Auth (GoTrue managed — schema `auth`)
+
+No visible en Prisma. GoTrue gestiona automáticamente:
+- `auth.users` — usuarios autenticados
+- `auth.sessions` — sesiones activas
+- `auth.identities` — identidades OAuth
+- `auth.refresh_tokens` — tokens de refresco
+
+### Profile (Prisma managed — schema `public`)
 
 ```prisma
-model User {
-  id            String    @id
-  name          String
-  email         String    @unique
-  emailVerified Boolean   @default(false) @map("email_verified")
-  image         String?
-  role          String    @default("user")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  
-  sessions      Session[]
-  accounts      Account[]
+model Profile {
+  id        String   @id @db.Uuid  // = auth.users.id
+  email     String?
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  role      String   @default("user")
 
-  @@map("users")
-}
+  salaries   Salary[]
+  reviews    Review[]
+  interviews Interview[]
 
-model Session {
-  id        String   @id
-  userId    String   @map("user_id")
-  token     String   @unique
-  expiresAt DateTime @map("expires_at")
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model Account {
-  id                   String    @id
-  userId               String    @map("user_id")
-  accountId            String    @map("account_id")
-  providerId           String    @map("provider_id")
-  accessToken          String?   @map("access_token")
-  refreshToken         String?   @map("refresh_token")
-  accessTokenExpiresAt DateTime? @map("access_token_expires_at")
-  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
-  scope                String?
-  password             String?
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-  
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("accounts")
-}
-
-model Verification {
-  id         String   @id
-  identifier String
-  value      String
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
-
-  @@map("verifications")
+  @@map("profiles")
 }
 ```
+
+El Profile se crea la primera vez que el usuario interactúa con la API.
 
 ---
 
-## Implementación en React
+## Deploy en Producción (PostgreSQL Fix)
 
-### 1. Cliente de Auth
+### Problema Original
 
-**`/apps/web/src/lib/auth-client.ts`**
-
-```typescript
-import { createAuthClient } from 'better-auth/react';
-
-export const authClient = createAuthClient({
-  baseURL: 'http://localhost:4000',
-  basePath: '/api/auth',
-  fetchOptions: {
-    credentials: 'include',
-  },
-});
-
-export const { 
-  signIn, 
-  signUp, 
-  signOut, 
-  useSession,
-  getSession,
-} = authClient;
+GoTrue (Supabase Auth) fallaba con:
+```
+ERROR: type "auth.factor_type" does not exist (SQLSTATE 42704)
 ```
 
-### 2. Context de Auth
+**Causa raíz:** El `init-db.sql` anterior no creaba los roles de PostgreSQL que
+GoTrue necesita según la guía oficial de Supabase. GoTrue conectaba como `empliq`
+en vez de `supabase_auth_admin`, y las migraciones en el schema `auth` quedaban
+corruptas.
 
-**`/apps/web/src/contexts/AuthContext.tsx`**
+### Fix Aplicado (replicar en producción)
 
-```typescript
-import { createContext, useContext, ReactNode } from 'react';
-import { authClient, useSession } from '@/lib/auth-client';
+1. **Crear los roles necesarios** ejecutando en PostgreSQL:
 
-interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
-  signOut: () => Promise<void>;
-}
+```sql
+-- Roles de API
+CREATE ROLE anon NOLOGIN NOINHERIT;
+CREATE ROLE authenticated NOLOGIN NOINHERIT;
+CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const { data: sessionData, isPending: loading } = useSession();
+-- GoTrue admin (con superuser para migraciones)
+CREATE ROLE supabase_auth_admin
+  NOINHERIT CREATEROLE LOGIN
+  PASSWORD '<PASSWORD_SEGURO>';
+ALTER ROLE supabase_auth_admin WITH SUPERUSER;
 
-  const signInWithGoogle = async () => {
-    await authClient.signIn.social({
-      provider: 'google',
-      callbackURL: '/',
-    });
-  };
-
-  const signInWithEmail = async (email: string, password: string) => {
-    const result = await authClient.signIn.email({ email, password });
-    if (result.error) {
-      return { error: new Error(result.error.message) };
-    }
-    window.location.href = '/';
-    return { error: null };
-  };
-
-  const signUpWithEmail = async (email: string, password: string, name: string) => {
-    const result = await authClient.signUp.email({ email, password, name });
-    if (result.error) {
-      return { error: new Error(result.error.message) };
-    }
-    window.location.href = '/';
-    return { error: null };
-  };
-
-  // ... resto del contexto
-}
+-- Authenticator (PostgREST)
+CREATE ROLE authenticator NOINHERIT LOGIN PASSWORD '<PASSWORD_SEGURO>';
+GRANT anon TO authenticator;
+GRANT authenticated TO authenticator;
+GRANT service_role TO authenticator;
+GRANT supabase_auth_admin TO authenticator;
 ```
 
-### 3. Uso en Componentes
+2. **Preparar el schema auth:**
 
-```tsx
-import { useAuth } from '@/contexts/AuthContext';
+```sql
+-- Si hay un schema auth corrupto, eliminarlo
+DROP SCHEMA IF EXISTS auth CASCADE;
 
-function LoginButton() {
-  const { signInWithGoogle, signInWithEmail, user, loading } = useAuth();
-
-  if (loading) return <Spinner />;
-  
-  if (user) {
-    return <p>Hola, {user.name}</p>;
-  }
-
-  return (
-    <>
-      <button onClick={signInWithGoogle}>
-        Continuar con Google
-      </button>
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        signInWithEmail(email, password);
-      }}>
-        <input type="email" />
-        <input type="password" />
-        <button type="submit">Iniciar sesión</button>
-      </form>
-    </>
-  );
-}
+-- Recrear con ownership correcto
+CREATE SCHEMA auth AUTHORIZATION supabase_auth_admin;
+GRANT ALL PRIVILEGES ON SCHEMA auth TO supabase_auth_admin;
+GRANT USAGE ON SCHEMA auth TO authenticated, anon, service_role;
+ALTER ROLE supabase_auth_admin SET search_path = 'auth';
 ```
 
----
+3. **Configurar GoTrue** para conectar con el rol correcto:
 
-## Proveedores de Autenticación
+```env
+GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:<PASSWORD>@<HOST>:5432/<DB>
+```
 
-### Email/Password ✅
-- Registro con email y contraseña
-- Login con email y contraseña
-- Contraseñas hasheadas con bcrypt
+4. **Reiniciar GoTrue.** Aplicará las 52 migraciones automáticamente.
 
-### Google OAuth ✅
-- Requiere configurar credenciales en Google Cloud Console
-- Callback URL: `http://localhost:4000/api/auth/callback/google`
+### Checklist para producción
 
-### LinkedIn OAuth (Post-MVP)
-- Similar a Google
-- Callback URL: `http://localhost:4000/api/auth/callback/linkedin`
-
----
-
-## Endpoints de Auth
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| POST | `/api/auth/sign-up/email` | Registro con email |
-| POST | `/api/auth/sign-in/email` | Login con email |
-| GET | `/api/auth/sign-in/social` | Iniciar OAuth |
-| GET | `/api/auth/callback/:provider` | Callback OAuth |
-| GET | `/api/auth/get-session` | Obtener sesión actual |
-| POST | `/api/auth/sign-out` | Cerrar sesión |
+- [ ] Generar JWT_SECRET propio (`openssl rand -base64 48`)
+- [ ] Generar ANON_KEY y SERVICE_ROLE_KEY con el nuevo JWT_SECRET
+- [ ] Usar passwords seguros para `supabase_auth_admin` y `authenticator`
+- [ ] Cambiar `API_EXTERNAL_URL` y `GOTRUE_SITE_URL` al dominio real
+- [ ] Cambiar `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI` al dominio real
+- [ ] Configurar CORS en Kong para el dominio real
+- [ ] En Google Cloud Console: agregar redirect URI de producción
 
 ---
 
 ## Seguridad
 
-- ✅ Cookies httpOnly para tokens de sesión
-- ✅ CORS configurado para orígenes confiables
-- ✅ Contraseñas hasheadas con bcrypt
-- ✅ Tokens de sesión con expiración
-- ✅ Refresh automático de sesiones
+- JWT tokens con expiración (1 hora, auto-refresh)
+- Cookies httpOnly gestionadas por `@supabase/ssr`
+- CORS configurado en Kong para `http://localhost:3000`
+- Solo Google OAuth — sin email/password
+- `SERVICE_ROLE_KEY` solo en backend (bypass RLS)
+- RLS (Row Level Security) por configurar
 
 ---
 
 ## Referencias
 
-- [Better Auth Docs](https://www.better-auth.com/docs/introduction)
-- [Better Auth + NestJS](https://www.better-auth.com/docs/integrations/nest-js)
-- [Better Auth + React](https://www.better-auth.com/docs/integrations/react)
+- [Supabase Auth Self-Hosting](https://supabase.com/docs/guides/self-hosting/docker)
+- [Supabase + Next.js SSR](https://supabase.com/docs/guides/auth/server-side/nextjs)
+- [GoTrue Docker Hub](https://hub.docker.com/r/supabase/gotrue)

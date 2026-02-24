@@ -47,7 +47,7 @@ export class SalaryRepositoryImpl implements ISalaryRepository {
     const salary = await this.prisma.salary.create({
       data: {
         positionId: data.positionId!,
-        userId: data.userId!,
+        profileId: data.profileId!,
         amount: data.amount!,
         currency: data.currency || 'MXN',
         period: data.period || 'monthly',
@@ -61,7 +61,7 @@ export class SalaryRepositoryImpl implements ISalaryRepository {
     return Salary.create({
       id: data.id,
       positionId: data.positionId,
-      userId: data.userId,
+      profileId: data.profileId,
       amount: Number(data.amount),
       currency: data.currency,
       period: data.period,
