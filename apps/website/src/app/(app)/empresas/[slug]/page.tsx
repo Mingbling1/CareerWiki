@@ -1,5 +1,4 @@
-import { Suspense } from "react"
-import { CompanyProfile } from "./company-profile"
+import { CompanyOverview } from "./company-overview"
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -21,16 +20,5 @@ export async function generateMetadata({ params }: Props) {
 export default async function CompanyPage({ params }: Props) {
   const { slug } = await params
 
-  return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
-          <div className="h-32 rounded-xl bg-muted/30 animate-pulse mb-6" />
-          <div className="h-64 rounded-xl bg-muted/30 animate-pulse" />
-        </div>
-      }
-    >
-      <CompanyProfile slug={slug} />
-    </Suspense>
-  )
+  return <CompanyOverview slug={slug} />
 }

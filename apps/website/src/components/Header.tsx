@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
 import { EmpliqLogo } from './EmpliqLogo'
+import { createClient } from '@/lib/supabase/client'
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -28,12 +29,12 @@ const recursos = [
     description: "Explora perfiles de empresas y sus organigramas.",
     icon: Building2,
   },
-  {
-    title: "Comunidad",
-    href: "/comunidad",
-    description: "Conecta con otros profesionales y comparte experiencias.",
-    icon: Users,
-  },
+  // {
+  //   title: "Comunidad",
+  //   href: "/comunidad",
+  //   description: "Conecta con otros profesionales y comparte experiencias.",
+  //   icon: Users,
+  // },
   {
     title: "Reseñas",
     href: "/resenas",
@@ -44,6 +45,14 @@ const recursos = [
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user)
+    })
+  }, [])
 
   return (
     <header
@@ -105,12 +114,14 @@ export function Header() {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/login"
-              className="px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
-            >
-              Iniciar sesión
-            </Link>
+            {!isLoggedIn && (
+              <Link
+                href="/login"
+                className="px-4 py-2 text-sm text-neutral-600 hover:text-neutral-900 transition-colors"
+              >
+                Iniciar sesión
+              </Link>
+            )}
             <Link
               href="/empresas"
               className="px-4 py-2.5 text-sm bg-neutral-900 text-white rounded-full font-medium hover:bg-neutral-800 transition-all hover:scale-[1.02]"
@@ -172,12 +183,14 @@ export function Header() {
               </Link>
             ))}
             <div className="pt-4 mt-4 border-t border-neutral-200 space-y-2">
-              <Link
-                href="/login"
-                className="block px-4 py-3 text-neutral-600 hover:text-neutral-900 rounded-lg transition-colors text-center"
-              >
-                Iniciar sesión
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/login"
+                  className="block px-4 py-3 text-neutral-600 hover:text-neutral-900 rounded-lg transition-colors text-center"
+                >
+                  Iniciar sesión
+                </Link>
+              )}
               <Link
                 href="/empresas"
                 className="block px-4 py-3 bg-neutral-900 text-white rounded-lg font-medium text-center hover:bg-neutral-800 transition-colors"

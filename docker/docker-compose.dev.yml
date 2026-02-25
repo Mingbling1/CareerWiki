@@ -23,8 +23,7 @@ services:
       - empliq-network
 
   # ==========================================
-  # Supabase Auth (GoTrue) — Google OAuth only
-  # Ref: https://supabase.com/docs/guides/self-hosting/docker
+  # Supabase Auth (GoTrue) — Local OAuth
   # ==========================================
   supabase-auth:
     image: supabase/gotrue:v2.158.1
@@ -32,69 +31,65 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
-      timeout: 5s
-      interval: 5s
-      retries: 3
     environment:
-      GOTRUE_API_HOST: 0.0.0.0
-      GOTRUE_API_PORT: 9999
-      API_EXTERNAL_URL: http://localhost:8000
-
-      # GoTrue connects as supabase_auth_admin (official Supabase pattern)
+      GOTRUE_API_HOST: "0.0.0.0"
+      GOTRUE_API_PORT: "9999"
+      API_EXTERNAL_URL: "http://localhost:8000"
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:supabase_auth_admin_password@postgres:5432/empliq
-
-      GOTRUE_SITE_URL: http://localhost:3000
-      GOTRUE_URI_ALLOW_LIST: ""
+      GOTRUE_DB_DATABASE_URL: "postgres://supabase_auth_admin:supabase_auth_admin_password@postgres:5432/empliq_pre_prod"
+      GOTRUE_SITE_URL: "http://localhost:3000"
+      GOTRUE_URI_ALLOW_LIST: "http://localhost:3000"
       GOTRUE_DISABLE_SIGNUP: "false"
-
       GOTRUE_JWT_ADMIN_ROLES: service_role
       GOTRUE_JWT_AUD: authenticated
       GOTRUE_JWT_DEFAULT_GROUP_NAME: authenticated
       GOTRUE_JWT_EXP: "3600"
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-
-      # Disable email/phone auth — Google OAuth only
+      GOTRUE_JWT_SECRET: "${JWT_SECRET}"
       GOTRUE_EXTERNAL_EMAIL_ENABLED: "false"
       GOTRUE_EXTERNAL_PHONE_ENABLED: "false"
       GOTRUE_MAILER_AUTOCONFIRM: "true"
-
-      # Google OAuth
-      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "true"
-      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_CLIENT_SECRET}
-      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: http://localhost:8000/auth/v1/callback
+      GOTRUE_EXTERNAL_GOOGLE_ENABLED: "${GOOGLE_OAUTH_ENABLED:-false}"
+      GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOTRUE_EXTERNAL_GOOGLE_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: "http://localhost:8000/auth/v1/callback"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - empliq-network
 
   # ==========================================
-  # Kong API Gateway — routes /auth/v1 → GoTrue
+  # Supabase Kong (API Gateway)
   # ==========================================
   supabase-kong:
     image: kong:2.8.1
     container_name: empliq-supabase-kong
     ports:
       - "8000:8000"
+    depends_on:
+      supabase-auth:
+        condition: service_healthy
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /kong.yml
-      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_DNS_ORDER: "LAST,A,CNAME"
       KONG_PLUGINS: cors
-      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: 160k
-      KONG_NGINX_PROXY_PROXY_BUFFERS: 64 160k
+      KONG_NGINX_PROXY_PROXY_BUFFER_SIZE: "160k"
+      KONG_NGINX_PROXY_PROXY_BUFFERS: "64 160k"
     volumes:
       - ./kong.yml:/kong.yml:ro
-    depends_on:
-      - supabase-auth
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - empliq-network
 
   # ==========================================
-  # Supabase Meta (postgres-meta) — required by Studio
+  # Supabase Meta (postgres-meta) — for Studio
   # ==========================================
   supabase-meta:
     image: supabase/postgres-meta:v0.95.2
@@ -102,50 +97,42 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
     environment:
-      PG_META_PORT: 8080
+      PG_META_PORT: "8080"
       PG_META_DB_HOST: postgres
-      PG_META_DB_PORT: 5432
+      PG_META_DB_PORT: "5432"
       PG_META_DB_NAME: empliq
       PG_META_DB_USER: supabase_admin
-      PG_META_DB_PASSWORD: empliq_dev_password
-      CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-empliq-dev-crypto-key-at-least-32ch}
+      PG_META_DB_PASSWORD: supabase_admin_password
     networks:
       - empliq-network
 
   # ==========================================
-  # Supabase Studio — Dashboard gráfico
-  # Access: http://localhost:54323
+  # Supabase Studio (Dashboard UI)
   # ==========================================
   supabase-studio:
-    image: supabase/studio:2026.02.16-sha-26c615c
+    image: supabase/studio:latest
     container_name: empliq-supabase-studio
-    restart: unless-stopped
+    depends_on:
+      - supabase-meta
+      - supabase-kong
     ports:
       - "54323:3000"
-    depends_on:
-      supabase-meta:
-        condition: service_started
-      supabase-auth:
-        condition: service_started
     environment:
       HOSTNAME: "::"
-      STUDIO_PG_META_URL: http://supabase-meta:8080
+      STUDIO_PG_META_URL: "http://supabase-meta:8080"
       POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
+      POSTGRES_PORT: "5432"
       POSTGRES_DB: empliq
-      POSTGRES_PASSWORD: empliq_dev_password
-      PG_META_CRYPTO_KEY: ${PG_META_CRYPTO_KEY:-empliq-dev-crypto-key-at-least-32ch}
-      DEFAULT_ORGANIZATION_NAME: Empliq
-      DEFAULT_PROJECT_NAME: Empliq Dev
-      SUPABASE_URL: http://supabase-kong:8000
-      SUPABASE_PUBLIC_URL: http://localhost:8000
-      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
-      SUPABASE_SERVICE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
-      AUTH_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      POSTGRES_PASSWORD: supabase_admin_password
+      DEFAULT_ORGANIZATION_NAME: "Empliq Dev"
+      DEFAULT_PROJECT_NAME: "Empliq Local"
+      SUPABASE_URL: "http://supabase-kong:8000"
+      SUPABASE_PUBLIC_URL: "http://localhost:8000"
+      SUPABASE_ANON_KEY: "${SUPABASE_ANON_KEY}"
+      SUPABASE_SERVICE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
+      AUTH_JWT_SECRET: "${JWT_SECRET}"
       NEXT_PUBLIC_ENABLE_LOGS: "false"
-      NEXT_ANALYTICS_BACKEND_PROVIDER: postgres
     networks:
       - empliq-network
 
@@ -165,13 +152,15 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - DATABASE_URL=postgresql://empliq:empliq_dev_password@postgres:5432/empliq
+      - DATABASE_URL=postgresql://empliq:empliq_dev_password@postgres:5432/empliq_pre_prod
       - CORS_ORIGINS=http://localhost:3000
       - SUPABASE_URL=http://supabase-kong:8000
-      - SUPABASE_JWT_SECRET=${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU}
+      - SUPABASE_JWT_SECRET=${JWT_SECRET}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
     depends_on:
       postgres:
+        condition: service_healthy
+      supabase-kong:
         condition: service_healthy
     command: npm run dev
     networks:
@@ -185,9 +174,6 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.website
     container_name: empliq-website
-    # network_mode: host → el contenedor comparte la red del host (Linux).
-    # localhost:8000 resuelve a Kong directamente, sin hacks de fetch.
-    # Ref: https://docs.docker.com/engine/network/drivers/host/
     network_mode: host
     volumes:
       - ../apps/website:/app
@@ -195,11 +181,14 @@ services:
       - /app/.next
     environment:
       - NODE_ENV=development
-      - NEXT_PUBLIC_API_URL=http://localhost:4000/api
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
       - NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
-      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
     depends_on:
-      - api
+      postgres:
+        condition: service_healthy
+      supabase-kong:
+        condition: service_healthy
     command: npm run dev
 
   # ==========================================

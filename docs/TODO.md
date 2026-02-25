@@ -2,7 +2,7 @@
 
 > Estado real del proyecto. Esto es lo primero que lee la IA/dev para entender contexto.
 >
-> **Última actualización:** 21 de febrero de 2026
+> **Última actualización:** 24 de febrero de 2026
 
 ---
 
@@ -20,17 +20,18 @@
 
 | Módulo | Estado | Progreso |
 |--------|--------|----------|
-| 🏢 Empresas (API + Frontend) | ✅ Completado | 100% |
-| 📊 Organigrama (API + Frontend) | ✅ Completado | 100% |
-| 🔐 Auth (Better Auth + Google) | ✅ Completado | 100% |
-| 🌐 Website Landing | ✅ Completado | 100% |
-| 📦 Storage (Oracle Object Storage) | ✅ Completado | 100% |
-| 🔍 Scraper Microservice | ✅ Completado | 100% |
-| 🏢 DatosPeru Enrichment | ✅ Producción | 100% |
-| 💰 Salarios | 🟡 Parcial | 40% |
-| 💬 Comentarios | 🟡 Parcial | 40% |
-| 👤 Puestos (vista detalle) | 🔴 Pendiente | 10% |
-| 🎤 Entrevistas | 🔴 Pendiente | 10% |
+|  Empresas (API + Frontend) |  Completado | 100% |
+|  Organigrama (API + Frontend) |  Completado | 100% |
+|  Auth (Supabase GoTrue + Google OAuth) |  Completado | 100% |
+|  Website Landing |  Completado | 100% |
+|  Storage (Oracle Object Storage) |  Completado | 100% |
+|  Scraper Microservice |  Completado | 100% |
+|  DatosPeru Enrichment |  Producción | 100% |
+|  Backend Producción (`api.musuq.me`) |  Desplegado | 100% |
+|  Salarios |  Parcial | 40% |
+|  Comentarios |  Parcial | 40% |
+|  Puestos (vista detalle) |  Pendiente | 10% |
+|  Entrevistas |  Pendiente | 10% |
 
 ---
 
@@ -86,6 +87,10 @@
 
 ## Completado Recientemente
 
+- [x] ~~Backend desplegado en `api.musuq.me`~~ (24 feb 2026)
+- [x] ~~Supabase GoTrue local para OAuth development~~ (24 feb 2026)
+- [x] ~~Fix Buffer/BodyInit en storage (API + Scraper)~~ (24 feb 2026)
+- [x] ~~Migración de Better Auth → Supabase GoTrue~~ (23 feb 2026)
 - [x] ~~Monochromatic redesign del website~~ (21 feb 2026)
 - [x] ~~IllustrationShowcase bento grid~~ (21 feb 2026)
 - [x] ~~Hero + LogoCloud above the fold~~ (21 feb 2026)
@@ -95,7 +100,6 @@
 - [x] ~~CRUD de empresas (crear, actualizar, upload logo)~~
 - [x] ~~Docker dev environment con hot reload~~
 - [x] ~~Oracle Object Storage integration~~
-- [x] ~~Better Auth con Google OAuth~~
 
 ---
 
@@ -115,13 +119,17 @@
 
 ## Contexto Técnico Rápido
 
-- **Monorepo:** `apps/{api, frontend, website, empliq-scraper-api}`
-- **Stack:** React+Vite / Next.js / NestJS (hexagonal) / PostgreSQL+Prisma
-- **Docker:** 5 containers — postgres:5432, api:4000, frontend:5173, website:3000, scraper:3457
-- **Auth:** Better Auth (email + Google OAuth) — sesiones con cookies httpOnly
+- **Monorepo:** `apps/{api, website, empliq-scraper-api}`
+- **Stack:** Next.js / NestJS (hexagonal) / PostgreSQL+Prisma
+- **Docker local:** 8 containers — postgres:5432, gotrue:9999, kong:8000, meta:8080, studio:54323, api:4000, website:3000, scraper:3457
+- **Auth:** Supabase GoTrue self-hosted (Google OAuth) — sesiones con JWT
+- **Storage:** Oracle Object Storage (PAR upload) — **no** Supabase Storage
 - **Deploy:** Oracle Cloud ARM + Docker + Traefik
+- **Backend prod:** `https://api.musuq.me/api` (repo: empliq-backend)
 - **Datos:** 6,123 empresas enriquecidas (Tier 1-3) en `companies_raw` (JSONB)
 - **Diseño:** Monocromático (negro/blanco/plata) — color solo para impacto
+- **Dev:** Website local consume API de producción. OAuth corre local.
 
 > Ver [ARCHITECTURE.md](./ARCHITECTURE.md) para diagramas detallados.
 > Ver [decisions/](./decisions/) para decisiones técnicas documentadas.
+> Ver [guides/LOCAL_SETUP.md](./guides/LOCAL_SETUP.md) para levantar el entorno.

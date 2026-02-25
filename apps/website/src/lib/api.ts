@@ -101,6 +101,16 @@ export interface JobCategory {
   }
 }
 
+export interface Profile {
+  id: string
+  email: string | null
+  name: string | null
+  avatarUrl: string | null
+  role: string
+  createdAt: string
+  updatedAt: string
+}
+
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
@@ -116,6 +126,16 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   }
 
   return response.json()
+}
+
+async function fetchAPIAuth<T>(endpoint: string, token: string, options?: RequestInit): Promise<T> {
+  return fetchAPI<T>(endpoint, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...options?.headers,
+    },
+  })
 }
 
 export const api = {
@@ -134,6 +154,11 @@ export const api = {
   },
   positions: {
     getByCompany: (companyId: string) => fetchAPI<Position[]>(`/companies/${companyId}/positions`),
+    create: (data: { companyId: string; title: string; categoryId?: string; level?: string }) =>
+      fetchAPI<Position>("/positions", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
   salaries: {
     getStats: (positionId: string) =>
@@ -156,8 +181,33 @@ export const api = {
   },
   benefits: {
     getByCompany: (companyId: string) => fetchAPI<Benefit[]>(`/companies/${companyId}/benefits`),
+    add: (data: { companyId: string; name: string; category: string; description?: string }) =>
+      fetchAPI<Benefit>("/benefits", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
   },
   categories: {
     getAll: () => fetchAPI<JobCategory[]>("/categories"),
+    getWithPositions: () =>
+      fetchAPI<
+        (JobCategory & {
+          topPositions: {
+            title: string
+            slug: string
+            medianSalary: number
+            count: number
+            companies: number
+          }[]
+        })[]
+      >("/categories/with-positions"),
+  },
+  profiles: {
+    getMe: (token: string) => fetchAPIAuth<Profile>("/profiles/me", token),
+    updateAvatar: (token: string, avatarUrl: string) =>
+      fetchAPIAuth<Profile>("/profiles/me/avatar", token, {
+        method: "PATCH",
+        body: JSON.stringify({ avatarUrl }),
+      }),
   },
 }

@@ -53,12 +53,13 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; overflow-x: hidden; }
 body {
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 ::selection { background: #1a1a1a; color: white; }
@@ -67,5 +68,5 @@ body {
 ::-webkit-scrollbar-thumb { background: oklch(0.85 0 0); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: oklch(0.75 0 0); }
 
-@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-.animate-marquee { animation: marquee 18s linear infinite; }
+@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
+.animate-marquee { animation: marquee 35s linear infinite; }

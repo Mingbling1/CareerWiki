@@ -6,24 +6,38 @@
 
 ## Diagrama de Contenedores (Docker)
 
+### Entorno Local (dev)
+
 ```mermaid
 graph TB
-    subgraph "Docker Compose (dev)"
+    subgraph "Docker Compose (dev) — 8 containers"
         PG[(PostgreSQL 16<br/>:5432)]
-        API[NestJS API<br/>:4000]
+        API[NestJS API<br/>:4000<br/><i>opcional</i>]
         WEB[Next.js Website<br/>:3000]
         SCR[Scraper API<br/>:3457]
         KONG[Kong Gateway<br/>:8000]
         AUTH[GoTrue Auth<br/>:9999]
+        META[Postgres Meta<br/>:8080]
+        STUDIO[Studio<br/>:54323]
     end
 
     USER((Usuario)) --> WEB
-    WEB --> API
-    WEB --> KONG
+    WEB -->|API calls| PROD_API
+    WEB -->|OAuth| KONG
     KONG --> AUTH
     AUTH --> PG
     API --> PG
     SCR --> PG
+    META --> PG
+    STUDIO --> META
+    STUDIO --> KONG
+
+    subgraph "Producción (Oracle Cloud ARM)"
+        PROD_API[Backend API<br/>api.musuq.me]
+        PROD_PG[(PostgreSQL<br/>empliq_prod)]
+    end
+
+    PROD_API --> PROD_PG
 
     subgraph "Externo"
         OCI[Oracle Object Storage]
@@ -33,9 +47,68 @@ graph TB
     end
 
     API --> OCI
+    PROD_API --> OCI
     SCR --> DP
     N8N --> SCR
     N8N --> PG
+    AUTH --> GOOGLE
+```
+
+> **Nota:** El website local consume el API **local** (`localhost:4000`) que conecta
+> a `empliq_pre_prod`. Supabase Auth (GoTrue) corre local para desarrollo de OAuth
+> sin afectar producción. Para consumir la API de producción, cambiar
+> `NEXT_PUBLIC_API_URL=https://api.musuq.me/api` en `docker/.env`.
+>
+> **Base de datos local:** `empliq_pre_prod` — staging con estructura Prisma idónea.
+> GoTrue local también conecta a `empliq_pre_prod` (schema `auth` separado del `public`).
+
+### Producción (Oracle Cloud ARM)
+
+```mermaid
+graph TB
+    subgraph "Oracle Cloud ARM (163.176.250.185)"
+        TRAEFIK[Traefik<br/>:443 HTTPS]
+        PG[(musuq-postgres<br/>PostgreSQL 16)]
+        REDIS[(musuq-redis)]
+        BACKEND[empliq-backend<br/>api.musuq.me]
+        AUTH[GoTrue<br/>supabase.musuq.me/auth]
+        KONG[Kong<br/>supabase.musuq.me]
+        META[Postgres Meta]
+        STUDIO_P[Studio<br/>studio.musuq.me]
+        SCRAPER[Scraper<br/>scraper.musuq.me]
+        N8N_P[n8n<br/>n8n.musuq.me]
+        CW[Chatwoot<br/>app.musuq.me]
+        AF[Affine<br/>affine.musuq.me]
+        DOZ[Dozzle<br/>logs.musuq.me]
+    end
+
+    INET((Internet)) --> TRAEFIK
+    TRAEFIK --> BACKEND
+    TRAEFIK --> KONG
+    TRAEFIK --> STUDIO_P
+    TRAEFIK --> SCRAPER
+    TRAEFIK --> N8N_P
+    TRAEFIK --> CW
+    TRAEFIK --> AF
+    TRAEFIK --> DOZ
+    KONG --> AUTH
+    AUTH --> PG
+    BACKEND --> PG
+    SCRAPER --> PG
+    N8N_P --> PG
+    CW --> PG
+    CW --> REDIS
+    META --> PG
+    STUDIO_P --> META
+
+    subgraph "Externo"
+        OCI[Oracle Object Storage<br/>sa-saopaulo-1]
+        CF[Cloudflare DNS]
+        GOOGLE[Google OAuth]
+    end
+
+    BACKEND --> OCI
+    TRAEFIK --> CF
     AUTH --> GOOGLE
 ```
 
@@ -78,23 +151,32 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant U as Usuario
-    participant W as Website (Next.js)
-    participant F as Frontend (React)
-    participant A as API (NestJS)
+    participant W as Website (Next.js :3000)
+    participant K as Kong (:8000)
+    participant G as GoTrue (:9999)
+    participant A as API (api.musuq.me)
     participant DB as PostgreSQL
 
-    U->>W: Visita landing
+    U->>W: Visita landing / app
     W-->>U: Render SSR
-    U->>F: Click "Comenzar gratis"
-    F->>A: POST /api/auth/sign-in
-    A->>DB: Validar/crear sesión
-    DB-->>A: Session token
-    A-->>F: Cookie httpOnly
-    F->>A: GET /api/companies
+
+    Note over U,G: Flujo OAuth (local)
+    U->>W: Click "Continuar con Google"
+    W->>K: supabase.auth.signInWithOAuth()
+    K->>G: /auth/v1/authorize?provider=google
+    G-->>U: Redirect a Google
+    U-->>G: Callback con code
+    G->>DB: Crear/actualizar auth.users
+    G-->>W: Redirect con session code
+    W-->>U: JWT en cookie
+
+    Note over U,DB: Flujo de datos (producción)
+    U->>W: Navega a /empresas
+    W->>A: GET /api/companies (Authorization: Bearer jwt)
     A->>DB: SELECT companies
     DB-->>A: Datos
-    A-->>F: JSON response
-    F-->>U: Render dashboard
+    A-->>W: JSON response
+    W-->>U: Render page
 ```
 
 ---
@@ -108,12 +190,24 @@ flowchart LR
     SCR --> DP[datosperu.org]
     DP --> SCR
     SCR --> N8N
-    N8N --> DB[(companies_raw<br/>JSONB)]
-    DB --> ETL[ETL Script]
-    ETL --> PROD[(companies<br/>Prisma)]
+    N8N --> DEV[(empliq_dev<br/>companies_raw<br/>JSONB)]
+    DEV --> ETL[migrate_companies.py<br/>SSH tunnel]
+    ETL --> PRE[(empliq_pre_prod<br/>companies<br/>Prisma)]
+    PRE -->|validado| PROD[(empliq_prod<br/>companies<br/>Prisma)]
 ```
 
-**Estado actual:** Tier 1-3 completado (6,123 empresas). Tier 4-5 pendiente (16,816).
+**Estado actual:** ~19,000+ empresas enriquecidas en empliq_dev (Tier 1-5).
+
+### Arquitectura de 3 Bases de Datos
+
+| BD | Host | Propósito | Schema |
+|---|---|---|---|
+| `empliq_dev` | Oracle Cloud (musuq-postgres) | Raw data scrapers (JSONB) | `companies_raw` sin estructura |
+| `empliq_pre_prod` | Local Docker (empliq-postgres) | Staging/testing con Prisma | Prisma schema + auth |
+| `empliq_prod` | Oracle Cloud (musuq-postgres) | Producción real | Prisma schema + auth |
+
+**Regla:** Los datos fluyen `empliq_dev → empliq_pre_prod → empliq_prod`. Nunca al revés.
+Ver `docs/technical/DATABASE_SAFETY.md` para reglas críticas.
 
 ---
 
@@ -165,8 +259,7 @@ erDiagram
 
 | Capa | Tecnología | Versión | Propósito |
 |------|-----------|---------|-----------|
-| Frontend App | React + Vite | 19.x / 6.x | Dashboard SPA |
-| Website | Next.js | 16.x | Landing SSR |
+| Website | Next.js | 16.x | Landing SSR + App |
 | UI Kit | TailwindCSS + shadcn/ui | 4.x | Estilos utility-first |
 | Organigrama | ReactFlow | - | Visualización interactiva |
 | 3D | Three.js | - | Shader background |
@@ -176,12 +269,39 @@ erDiagram
 | Base de datos | PostgreSQL | 16.x | Persistencia |
 | Auth | Supabase GoTrue | v2.158.1 | Google OAuth self-hosted |
 | API Gateway | Kong | 2.8.1 | Proxy /auth/v1/* → GoTrue |
-| Storage | Oracle Object Storage | - | Logos, archivos |
+| Storage | Oracle Object Storage | - | Logos, archivos (PAR upload) |
 | Scraper | NestJS microservice | - | DatosPeru enrichment |
 | Automatización | n8n | - | Pipelines de datos |
-| Infra | Oracle Cloud ARM | - | Servidor producción |
-| Reverse Proxy | Traefik | - | HTTPS + routing |
+| Infra | Oracle Cloud ARM | A1.Flex 4c/24GB | Servidor producción |
+| Reverse Proxy | Traefik | 3.x | HTTPS + routing (Cloudflare DNS) |
 | Containers | Docker + Compose | - | Entorno dev/prod |
+| CI/CD | GitHub Actions | - | Deploy automático |
+
+---
+
+## Subdominios de Producción
+
+| Subdominio | Servicio | Descripción |
+|------------|----------|-------------|
+| `api.musuq.me` | empliq-backend | Backend API (NestJS) |
+| `supabase.musuq.me` | empliq-kong | Supabase API Gateway |
+| `studio.musuq.me` | empliq-studio | Dashboard Supabase |
+| `scraper.musuq.me` | empliq-scraper | Scraper API |
+| `n8n.musuq.me` | n8n | Automatización |
+| `app.musuq.me` | chatwoot | Soporte |
+| `affine.musuq.me` | affine | Docs/Whiteboard |
+| `logs.musuq.me` | dozzle | Log viewer |
+| `traefik.musuq.me` | traefik | Dashboard Traefik |
+
+---
+
+## Repos
+
+| Repo | Contenido | Deploy |
+|------|-----------|--------|
+| `CareerWiki` (monorepo) | `apps/{api, website, empliq-scraper-api}`, docs, scripts | — |
+| `empliq-backend` | Backend API standalone (clon de `apps/api`) | `api.musuq.me` |
+| `musuq-platform` | Scripts infra Oracle Cloud, CI/CD, Docker services | Oracle ARM |
 
 ---
 

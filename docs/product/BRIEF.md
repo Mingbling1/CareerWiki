@@ -8,7 +8,7 @@ Plataforma de **transparencia laboral** para el Perú. Inspirada en [levels.fyi]
 
 ---
 
-## 📱 Producto MVP
+##  Producto MVP
 
 ### Concepto
 Empliq es una plataforma tipo **red social de empresas**. Las empresas son los perfiles principales. Los usuarios contribuyen de forma **anónima** (públicamente), pero internamente se registra quién contribuye para moderación.
@@ -23,7 +23,7 @@ Cada perfil de empresa está compuesto por **3 secciones** (tabs):
 
 ---
 
-### 🏠 Tab 1 — Resumen (Overview)
+###  Tab 1 — Resumen (Overview)
 
 Vista general de la empresa:
 
@@ -35,7 +35,7 @@ Vista general de la empresa:
 
 > Inspiración visual: la sección "About" + "Top Insights" de levels.fyi
 
-### 📊 Tab 2 — Organigrama
+###  Tab 2 — Organigrama
 
 Visualización interactiva del organigrama de la empresa usando **ReactFlow**:
 
@@ -46,7 +46,7 @@ Visualización interactiva del organigrama de la empresa usando **ReactFlow**:
 
 > Esto es la app que desarrollamos con ReactFlow, integrada como tab del perfil de empresa.
 
-### 📦 Tab 3 — Recursos
+###  Tab 3 — Recursos
 
 Todo lo que existe en el organigrama, listado como recursos navegables:
 
@@ -63,7 +63,7 @@ Cada **puesto** (Position) dentro de la empresa tiene:
 
 ---
 
-## 🏗️ Arquitectura
+##  Arquitectura
 
 ### Decisión: Todo en Next.js (SSR + CSR)
 Se migró la app React (Vite) al website Next.js. Razón: **SEO crítico** para una plataforma de contenido público. Las páginas de empresas, salarios y perfiles deben ser indexables por Google.
@@ -87,7 +87,7 @@ Se migró la app React (Vite) al website Next.js. Razón: **SEO crítico** para 
 
 ---
 
-## 📐 Estructura de la Plataforma
+##  Estructura de la Plataforma
 
 ### Secciones Principales
 
@@ -123,7 +123,7 @@ Se migró la app React (Vite) al website Next.js. Razón: **SEO crítico** para 
 
 ---
 
-## 🗄️ Modelo de Datos
+##  Modelo de Datos
 
 ### Estrategia de 3 Bases de Datos
 
@@ -220,7 +220,7 @@ JobCategory ── Position[]  → agrupación de puestos
 
 ---
 
-## 🎨 Principios de Diseño
+##  Principios de Diseño
 
 1. **Monocromático** — Solo blanco, negro, grises. Sin colores de marca.
 2. **Anonimato público** — Contribuciones anónimas para el público
@@ -232,7 +232,7 @@ JobCategory ── Position[]  → agrupación de puestos
 
 ---
 
-## 🚫 NO incluido en MVP (Post-MVP)
+##  NO incluido en MVP (Post-MVP)
 
 - Navegador global de salarios (`/salarios`) — por ahora solo dentro de cada empresa
 - Tab de Beneficios separado (se maneja dentro de Recursos)
@@ -250,7 +250,7 @@ JobCategory ── Position[]  → agrupación de puestos
 
 ---
 
-## 📊 Pipeline de Datos
+##  Pipeline de Datos
 
 ### Fuente
 - **Padrón RUC SUNAT** → 22,939 empresas segmentadas (Tier 1-5)
@@ -261,8 +261,8 @@ JobCategory ── Position[]  → agrupación de puestos
 
 | Tier | Criterio | Empresas | Estado |
 |------|----------|----------|--------|
-| Tier 1 | ≥1000 trabajadores | 915 | ✅ Completado |
-| Tier 2 | 500-999 | 798 | ✅ Completado |
-| Tier 3 | 100-499 | 4,410 | ✅ Completado |
-| Tier 4 | 50-99 | 4,858 | 🔄 En proceso |
-| Tier 5 | 20-49 | 11,958 | 🔄 En proceso |
+| Tier 1 | ≥1000 trabajadores | 915 |  Completado |
+| Tier 2 | 500-999 | 798 |  Completado |
+| Tier 3 | 100-499 | 4,410 |  Completado |
+| Tier 4 | 50-99 | 4,858 |  En proceso |
+| Tier 5 | 20-49 | 11,958 |  En proceso |

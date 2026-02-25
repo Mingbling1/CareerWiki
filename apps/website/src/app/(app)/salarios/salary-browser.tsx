@@ -19,8 +19,8 @@ import {
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { api, type JobCategory, type Position } from "@/lib/api"
+import { Skeleton } from "@/components/ui/skeleton"
+import { api, type JobCategory } from "@/lib/api"
 
 const categoryIcons: Record<string, LucideIcon> = {
   "Tecnología": Monitor,
@@ -34,8 +34,7 @@ const categoryIcons: Record<string, LucideIcon> = {
   "Administración": ClipboardList,
 }
 
-// Mock categories with salary data
-const mockCategories: (JobCategory & {
+type CategoryWithPositions = JobCategory & {
   topPositions: {
     title: string
     slug: string
@@ -43,133 +42,7 @@ const mockCategories: (JobCategory & {
     count: number
     companies: number
   }[]
-})[] = [
-  {
-    id: "c1",
-    name: "Tecnología",
-    slug: "tecnologia",
-    description: "Desarrollo de software, infraestructura, datos y producto digital.",
-    icon: "Monitor",
-    _count: { positions: 156 },
-    topPositions: [
-      { title: "Desarrollador Full Stack", slug: "desarrollador-full-stack", medianSalary: 7500, count: 245, companies: 42 },
-      { title: "Ingeniero DevOps", slug: "ingeniero-devops", medianSalary: 9200, count: 87, companies: 28 },
-      { title: "Analista de Datos", slug: "analista-de-datos", medianSalary: 6800, count: 178, companies: 35 },
-      { title: "Desarrollador Frontend", slug: "desarrollador-frontend", medianSalary: 6500, count: 198, companies: 40 },
-      { title: "Desarrollador Backend", slug: "desarrollador-backend", medianSalary: 7800, count: 165, companies: 38 },
-      { title: "Tech Lead", slug: "tech-lead", medianSalary: 12000, count: 45, companies: 20 },
-    ],
-  },
-  {
-    id: "c2",
-    name: "Finanzas",
-    slug: "finanzas",
-    description: "Contabilidad, análisis financiero, auditoría y tesorería.",
-    icon: "DollarSign",
-    _count: { positions: 89 },
-    topPositions: [
-      { title: "Analista Financiero", slug: "analista-financiero", medianSalary: 5500, count: 312, companies: 55 },
-      { title: "Controller Financiero", slug: "controller-financiero", medianSalary: 11000, count: 42, companies: 25 },
-      { title: "Contador General", slug: "contador-general", medianSalary: 6200, count: 198, companies: 48 },
-      { title: "Tesorero", slug: "tesorero", medianSalary: 7500, count: 56, companies: 22 },
-      { title: "Auditor Interno", slug: "auditor-interno", medianSalary: 5800, count: 124, companies: 35 },
-    ],
-  },
-  {
-    id: "c3",
-    name: "Marketing y Ventas",
-    slug: "marketing-y-ventas",
-    description: "Marketing digital, branding, ventas y desarrollo comercial.",
-    icon: "Megaphone",
-    _count: { positions: 72 },
-    topPositions: [
-      { title: "Gerente de Marketing", slug: "gerente-de-marketing", medianSalary: 9500, count: 67, companies: 30 },
-      { title: "Ejecutivo de Ventas", slug: "ejecutivo-de-ventas", medianSalary: 4500, count: 420, companies: 65 },
-      { title: "Community Manager", slug: "community-manager", medianSalary: 3200, count: 156, companies: 42 },
-      { title: "Brand Manager", slug: "brand-manager", medianSalary: 8000, count: 45, companies: 18 },
-    ],
-  },
-  {
-    id: "c4",
-    name: "Ingeniería",
-    slug: "ingenieria",
-    description: "Ingeniería civil, mecánica, eléctrica, industrial y minera.",
-    icon: "Wrench",
-    _count: { positions: 95 },
-    topPositions: [
-      { title: "Ingeniero de Minas", slug: "ingeniero-de-minas", medianSalary: 12000, count: 89, companies: 15 },
-      { title: "Ingeniero Civil", slug: "ingeniero-civil", medianSalary: 7500, count: 134, companies: 28 },
-      { title: "Ingeniero Industrial", slug: "ingeniero-industrial", medianSalary: 6800, count: 178, companies: 35 },
-      { title: "Ingeniero Eléctrico", slug: "ingeniero-electrico", medianSalary: 8200, count: 67, companies: 20 },
-    ],
-  },
-  {
-    id: "c5",
-    name: "RRHH",
-    slug: "recursos-humanos",
-    description: "Gestión del talento, compensaciones, cultura y desarrollo organizacional.",
-    icon: "Users",
-    _count: { positions: 48 },
-    topPositions: [
-      { title: "Gerente de RRHH", slug: "gerente-de-rrhh", medianSalary: 10000, count: 56, companies: 30 },
-      { title: "Analista de Compensaciones", slug: "analista-de-compensaciones", medianSalary: 5800, count: 89, companies: 25 },
-      { title: "Recruiter", slug: "recruiter", medianSalary: 4500, count: 145, companies: 40 },
-      { title: "Business Partner RRHH", slug: "business-partner-rrhh", medianSalary: 8500, count: 42, companies: 22 },
-    ],
-  },
-  {
-    id: "c6",
-    name: "Operaciones",
-    slug: "operaciones",
-    description: "Logística, cadena de suministro, producción y procesos.",
-    icon: "Settings",
-    _count: { positions: 63 },
-    topPositions: [
-      { title: "Gerente de Operaciones", slug: "gerente-de-operaciones", medianSalary: 11000, count: 45, companies: 22 },
-      { title: "Jefe de Logística", slug: "jefe-de-logistica", medianSalary: 7200, count: 78, companies: 30 },
-      { title: "Supervisor de Producción", slug: "supervisor-de-produccion", medianSalary: 5500, count: 112, companies: 25 },
-    ],
-  },
-  {
-    id: "c7",
-    name: "Legal",
-    slug: "legal",
-    description: "Asesoría legal, compliance, propiedad intelectual y regulatorio.",
-    icon: "Scale",
-    _count: { positions: 35 },
-    topPositions: [
-      { title: "Abogado Senior", slug: "abogado-senior", medianSalary: 9000, count: 56, companies: 25 },
-      { title: "Jefe Legal", slug: "jefe-legal", medianSalary: 12000, count: 34, companies: 20 },
-      { title: "Analista de Compliance", slug: "analista-de-compliance", medianSalary: 6500, count: 67, companies: 22 },
-    ],
-  },
-  {
-    id: "c8",
-    name: "Salud",
-    slug: "salud",
-    description: "Medicina, enfermería, farmacología y salud ocupacional.",
-    icon: "HeartPulse",
-    _count: { positions: 42 },
-    topPositions: [
-      { title: "Médico Ocupacional", slug: "medico-ocupacional", medianSalary: 8000, count: 78, companies: 18 },
-      { title: "Enfermero/a", slug: "enfermero", medianSalary: 3500, count: 145, companies: 15 },
-      { title: "Farmacéutico", slug: "farmaceutico", medianSalary: 5000, count: 89, companies: 12 },
-    ],
-  },
-  {
-    id: "c9",
-    name: "Administración",
-    slug: "administracion",
-    description: "Asistentes administrativos, recepción y gestión de oficinas.",
-    icon: "ClipboardList",
-    _count: { positions: 38 },
-    topPositions: [
-      { title: "Asistente Ejecutivo", slug: "asistente-ejecutivo", medianSalary: 4000, count: 198, companies: 55 },
-      { title: "Administrador de Oficina", slug: "administrador-de-oficina", medianSalary: 4500, count: 134, companies: 40 },
-      { title: "Recepcionista", slug: "recepcionista", medianSalary: 2500, count: 210, companies: 50 },
-    ],
-  },
-]
+}
 
 function formatSalary(amount: number): string {
   return `S/ ${amount.toLocaleString("es-PE")}`
@@ -177,11 +50,25 @@ function formatSalary(amount: number): string {
 
 export function SalaryBrowser() {
   const [search, setSearch] = useState("")
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(
-    "Tecnología"
-  )
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
+  const [categories, setCategories] = useState<CategoryWithPositions[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredCategories = mockCategories.filter((cat) => {
+  useEffect(() => {
+    api.categories
+      .getWithPositions()
+      .then((data) => {
+        setCategories(data)
+        // Auto-expand first category that has positions
+        const first = data.find((c) => c.topPositions.length > 0)
+        if (first) setExpandedCategory(first.name)
+      })
+      .catch(() => setError("No se pudieron cargar los datos salariales"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const filteredCategories = categories.filter((cat) => {
     if (!search) return true
     const searchLower = search.toLowerCase()
     if (cat.name.toLowerCase().includes(searchLower)) return true
@@ -189,6 +76,34 @@ export function SalaryBrowser() {
       p.title.toLowerCase().includes(searchLower)
     )
   })
+
+  const totalPositions = categories.reduce((acc, c) => acc + (c._count?.positions || 0), 0)
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-full max-w-md" />
+        <Skeleton className="h-20 w-full rounded-xl" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-[72px] w-full rounded-xl" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-16">
+        <DollarSign className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+        <h3 className="font-medium text-muted-foreground">{error}</h3>
+        <p className="text-sm text-muted-foreground/70 mt-1">
+          Intenta recargar la página
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -204,19 +119,34 @@ export function SalaryBrowser() {
       </div>
 
       {/* Summary Banner */}
-      <div className="rounded-xl border bg-card p-5 flex items-center gap-4">
-        <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
-          <TrendingUp className="h-5 w-5 text-muted-foreground" />
+      {totalPositions > 0 && (
+        <div className="rounded-xl border border-border/40 bg-card p-5 flex items-center gap-4">
+          <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              Datos salariales de {totalPositions} puesto{totalPositions !== 1 ? "s" : ""}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Reportados por empleados en {categories.length} categoría{categories.length !== 1 ? "s" : ""} profesionales
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-medium">
-            Datos salariales de {mockCategories.reduce((acc, c) => acc + (c._count?.positions || 0), 0)}+ puestos
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Reportados por empleados en {mockCategories.length} categorías profesionales
+      )}
+
+      {/* Empty state when no data at all */}
+      {categories.length === 0 && (
+        <div className="text-center py-16">
+          <DollarSign className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+          <h3 className="font-medium text-muted-foreground">
+            Aún no hay datos salariales
+          </h3>
+          <p className="text-sm text-muted-foreground/70 mt-1">
+            Sé el primero en contribuir reportando tu salario
           </p>
         </div>
-      </div>
+      )}
 
       {/* Categories */}
       <div className="space-y-3">
@@ -234,7 +164,7 @@ export function SalaryBrowser() {
           return (
             <div
               key={category.id}
-              className="rounded-xl border overflow-hidden"
+              className="rounded-xl border border-border/40 overflow-hidden"
             >
               {/* Category Header */}
               <button
@@ -266,7 +196,7 @@ export function SalaryBrowser() {
 
               {/* Expanded Position List */}
               {isExpanded && matchedPositions.length > 0 && (
-                <div className="border-t">
+                <div className="border-t border-border/40">
                   {/* Table Header */}
                   <div className="hidden sm:grid grid-cols-4 gap-4 px-4 py-2 text-[10px] font-medium text-muted-foreground uppercase tracking-wider bg-muted/30">
                     <span className="col-span-1">Puesto</span>
@@ -279,7 +209,7 @@ export function SalaryBrowser() {
                     <div
                       key={position.slug}
                       className={`grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4 px-4 py-3 hover:bg-muted/30 transition-colors items-center ${
-                        idx < matchedPositions.length - 1 ? "border-b" : ""
+                        idx < matchedPositions.length - 1 ? "border-b border-border/40" : ""
                       }`}
                     >
                       <div className="col-span-1">
@@ -301,12 +231,21 @@ export function SalaryBrowser() {
                   ))}
                 </div>
               )}
+
+              {/* Empty state for expanded category with no positions */}
+              {isExpanded && matchedPositions.length === 0 && (
+                <div className="border-t border-border/40 px-4 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Aún no hay datos salariales en esta categoría
+                  </p>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
 
-      {filteredCategories.length === 0 && (
+      {filteredCategories.length === 0 && search && (
         <div className="text-center py-16">
           <DollarSign className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
           <h3 className="font-medium text-muted-foreground">

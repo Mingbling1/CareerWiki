@@ -2,7 +2,7 @@
 
 > Guía de estilo visual para mantener consistencia entre el website y la aplicación frontend.
 
-## 📋 Índice
+##  Índice
 
 1. [Filosofía de Diseño](#filosofía-de-diseño)
 2. [Paleta de Colores](#paleta-de-colores)
@@ -506,3 +506,324 @@ screens: {
 - [Lucide Icons](https://lucide.dev/icons)
 - [Inter Font](https://rsms.me/inter/)
 - [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
+
+---
+
+## Patrones de App (website)
+
+### App Header (dos barras)
+
+Componente: `AppHeader.tsx`
+
+```
++--[Logo]-----[Search]-----[S/ PEN 🇵🇪]--[Bell]--[Avatar]--+  <- barra primaria
++--[Salarios]--[Empresas]-----------------------------------+  <- barra secundaria
+```
+
+- Barra primaria: logo, busqueda global (oculta en mobile con toggle), selector moneda/idioma (solo `md+`), notificaciones, avatar/login
+- Barra secundaria: tabs de navegacion siempre visibles (mobile y desktop)
+- Sticky `top-0 z-50` con `backdrop-blur`
+- Mobile: busqueda se expande debajo al tocar icono lupa. Sin hamburger menu.
+- Contenedor: `max-w-7xl mx-auto px-4 sm:px-6`
+
+### Currency / Language Selector
+
+Componente: `CurrencyLanguageSelector.tsx`
+
+- Display estatico (sin interaccion): `S/. PEN / mes` y bandera `🇵🇪`
+- Solo PEN (Sol Peruano) y Español (Peru) — unica moneda e idioma activo
+- Solo visible en desktop (`hidden md:flex`)
+- Dos `<span>` con separador `/` y estilos `text-sm text-muted-foreground`
+
+### App Footer
+
+Componente: `AppFooter.tsx`
+
+- Cuatro columnas: Logo+tagline | Empliq | Contribuir | Legal
+- Mobile: grid `grid-cols-2`, desktop: `md:grid-cols-4`
+- Fondo: `bg-muted/30 border-t border-border/40`
+- Copyright + iconos sociales (GitHub, Twitter) en fila inferior
+
+### User Dropdown Menu
+
+- Ancho: `w-56`
+- Dos secciones separadas por `border-t border-border/60`:
+  1. **Info**: nombre + email
+  2. **Configuracion**: link a `/configuracion`
+  3. **Cerrar sesion** (texto `text-destructive`)
+- Items: `px-4 py-2.5 text-sm` con iconos Lucide `h-4 w-4`
+- Backdrop: overlay invisible `fixed inset-0 z-40` para cerrar al hacer click fuera
+- Configuracion es `<Link>` que navega a la pagina completa de settings
+
+### Settings Page (Configuracion)
+
+Ruta: `/configuracion` — Componente: `settings-page.tsx`
+
+- Layout: sidebar izquierda (`md:w-56`) + panel de contenido derecha
+- Boton "Volver" con `ArrowLeft` que usa `router.back()`
+- 6 secciones via tabs internos (estado local, sin cambiar URL):
+  1. **Perfil**: avatar (Google sync), nombre, email, cargo, empresa
+  2. **Notificaciones**: toggles para email, alertas de salarios/resenas, digest semanal
+  3. **Privacidad**: toggles para perfil publico, mostrar salario, mostrar empresa + zona de peligro (eliminar cuenta)
+  4. **Apariencia**: selector de tema (claro/oscuro/sistema con cards), idioma, moneda
+  5. **Plan**: card con plan actual (gratuito), limites de uso
+  6. **Ayuda**: links a FAQ, centro de ayuda, reportar problema, contacto
+- Toggle custom: `h-5 w-9` con animacion de desplazamiento
+- Contenido envuelto en card: `rounded-xl border border-border/40 bg-card p-6 sm:p-8`
+- Todas las acciones marcadas como "proximamente" (UI scaffolding)
+
+### Scrollable Tabs (con flechas)
+
+Componente: `ScrollableTabs.tsx`
+
+- Tabs horizontales con scroll automatico y flechas de navegacion
+- Flechas circulares (`w-7 h-7 rounded-full`) aparecen solo cuando hay overflow
+- Flecha izquierda se oculta cuando esta al inicio, derecha al final
+- `scrollbar-none` para ocultar scrollbar nativo
+- Al montar, hace scroll automatico al tab activo: `scrollIntoView({ inline: "center" })`
+- Scroll suave al presionar flechas: `scrollBy({ behavior: "smooth" })`
+- Usado en company profile tabs (Resumen, Salarios, Resenas, Beneficios)
+- Escalable: soporta N tabs sin romper el layout
+
+### Company Profile Layout (SEO)
+
+Rutas con layout compartido:
+
+```
+/empresas/[slug]            -> Resumen (CompanyOverview)
+/empresas/[slug]/salarios   -> Salarios (CompanySalarios)
+/empresas/[slug]/resenas    -> Resenas (CompanyResenas)
+/empresas/[slug]/beneficios -> Beneficios (CompanyBeneficios)
+```
+
+- `layout.tsx` client component con `CompanyProvider` (React Context para datos compartidos)
+- Tabs por URL usando `ScrollableTabs` con flechas de navegacion en mobile
+- Cada sub-pagina tiene `generateMetadata()` para SEO
+- Header de empresa: back arrow, logo, nombre, meta (industria, ubicacion, empleados, fundacion, web, rating)
+- Tab activo: `after:h-[2px] after:bg-foreground after:rounded-full`
+
+### Company Cards (responsive)
+
+Componente: `company-list.tsx`
+
+- Card: `rounded-xl border border-border/40 bg-card p-5 overflow-hidden`
+- Layout interno: `flex items-start gap-3 min-w-0` para contener texto
+- Nombre y industria: `truncate` para evitar overflow
+- Descripcion: `line-clamp-2 break-words` para cortar texto largo
+- Stats (ubicacion, empleados): `min-w-0 truncate` en contenedor y `shrink-0` en iconos
+- Grid responsive: `grid gap-4 sm:grid-cols-2 lg:grid-cols-3`
+
+### Login Page
+
+- Grid `lg:grid-cols-2`: formulario izquierda, panel decorativo derecha
+- Panel derecho: ilustracion de fondo (opacity 7%), quote, avatar real
+- Ilustraciones: `/public/illustrations/work/` (12 variantes)
+- Avatares: `/public/avatars/` (12 variantes)
+- Solo Google OAuth, boton full-width `h-11`
+
+### Logo Carousel (Landing)
+
+- Marquee CSS puro: `translateX(-33.333%)` con 3x duplicacion de logos
+- Velocidad: `35s linear infinite`
+- Gradient masks en bordes para fade-in/fade-out
+- Logos en grayscale con hover a color
+
+### Overflow Prevention (Mobile)
+
+```css
+html { overflow-x: hidden; }
+body { overflow-x: hidden; }
+```
+
+- Layout root: `overflow-x-hidden` en el contenedor principal
+- Cards: `overflow-hidden` para contener contenido
+- Textos largos: `truncate`, `line-clamp-2`, `break-words`
+- Tabs: `ScrollableTabs` con flechas en lugar de scroll libre
+
+### Review System
+
+#### ReviewForm (`ReviewForm.tsx`)
+
+Formulario colapsable estilo YouTube para enviar reseñas.
+
+**Stack:** react-hook-form + zod + @hookform/resolvers/zod
+
+**Dependencias npm (website workspace):**
+```
+react-hook-form: ^7.71.2
+@hookform/resolvers: ^5.2.2
+zod: ^4.3.6
+```
+
+> **Nota monorepo:** Estas dependencias se hoistan al root `node_modules/`. Si
+> Turbopack dev no las resuelve, ejecutar `npm install @hookform/resolvers --workspace=apps/website`.
+
+**Schema Zod:**
+```ts
+z.object({
+  rating: z.number().min(1).max(5),
+  title: z.string().min(3).max(120),
+  comment: z.string().min(20).max(2000),
+  jobTitle: z.string().min(2).max(100),
+  isCurrentEmployee: z.boolean(),
+})
+```
+
+**Estados del componente:**
+1. **Colapsado** — Prompt clickeable: `rounded-xl border border-border/40 bg-card hover:bg-muted/30 p-5`
+2. **Expandido** — Formulario completo con campos
+3. **Enviado** — Mensaje de confirmacion con icono estrella, se auto-colapsa en 3s
+
+**Subcomponente StarRating:**
+- 5 estrellas clickeables con hover state y labels (Muy mal → Excelente)
+- Estrella activa: `fill-foreground text-foreground`
+- Estrella inactiva: `text-muted-foreground/25`
+- Animacion: `hover:scale-110`
+
+**Campos del formulario:**
+- Rating (StarRating customizado)
+- Cargo + Estado (grid 2 columnas en `sm+`)
+- Titulo de resena (Input)
+- Comentario (Textarea `min-h-[120px]` con contador `{n}/2000`)
+
+**Labels:** `text-xs font-medium text-muted-foreground uppercase tracking-wider`
+**Inputs:** `bg-muted/30 border-border/60 h-9 text-sm`
+**Submit bar:** `bg-muted/20 border-t border-border/40` con texto anonimato + boton
+
+#### ReviewList (`ReviewList.tsx`)
+
+Lista de resenas estilo YouTube con paginacion "Mostrar mas".
+
+**Estructura de ReviewCard:**
+- Avatar circular (`h-9 w-9 rounded-full`) con iniciales
+- Header: nombre anonimo, badge (con/sin empleo actual), estrellitas, tiempo relativo
+- Cargo: `text-xs text-muted-foreground`
+- Comentario: texto libre
+- Footer: boton "Util" con toggle + "Reportar" dropdown
+
+**Star Rating display (inline):**
+- Estrellas small `h-3.5 w-3.5`
+- Activa: `fill-foreground text-foreground`
+- Inactiva: `text-muted-foreground/20`
+
+**Paginacion:** `REVIEWS_PER_PAGE = 10`, boton "Mostrar mas resenas" con `ChevronDown`
+
+**Loading skeleton (anatomico):**
+```tsx
+<Skeleton className="h-9 w-9 rounded-full" />  // Avatar
+<Skeleton className="h-4 w-20" />               // Nombre
+<Skeleton className="h-3.5 w-24" />             // Cargo
+<Skeleton className="h-3 w-full" />             // Texto linea 1
+<Skeleton className="h-3 w-4/5" />              // Texto linea 2
+<Skeleton className="h-3 w-2/3" />              // Texto linea 3
+```
+
+### Skeleton Loading (patron general)
+
+Componente base: `@/components/ui/skeleton` (shadcn)
+
+**Regla:** Cada seccion que carga datos tiene su propio skeleton anatomico que replica
+la estructura visual del contenido real. No usar spinners genericos (Loader2).
+
+**Patrones:**
+- Circular (avatares): `rounded-full`
+- Rectangulos (texto): `h-3` a `h-7` con anchos variables (`w-20`, `w-full`, `w-4/5`)
+- Linea separadora: `h-px w-full`
+- Cards: mismo `rounded-xl border` que la card real
+- Replicar el grid/layout exacto del contenido final
+
+**Implementaciones:**
+- Company layout: header skeleton + tabs
+- Company list: card skeleton con avatar + lineas
+- Settings page: sidebar nav + content area
+- ReviewList: avatar + nombre/cargo + lineas de texto
+
+### Paginas Legales
+
+Rutas: `/terminos` y `/privacidad`
+
+**Layout comun:**
+- Contenedor: `max-w-4xl mx-auto px-4 sm:px-6 py-12 sm:py-16`
+- Titulo: `text-3xl sm:text-4xl font-bold`
+- Fecha: `text-sm text-muted-foreground`
+- Secciones: `<h2>` numeradas con clases `text-xl sm:text-2xl font-semibold`
+- Parrafos: `text-muted-foreground leading-relaxed`
+- Listas: `list-disc list-inside space-y-1`
+- Footer link: "Volver al inicio" → `/`
+
+**Contenido:**
+- Terminos de servicio: 11 secciones, ley peruana
+- Politica de privacidad: 14 secciones, Ley 29733 (LPDP), derechos ARCO, ANPDP
+- Emails de contacto: `legal@empliq.io`, `privacidad@empliq.io`
+
+**Links en footers:** "Terminos de servicio" → `/terminos`, "Politica de privacidad" → `/privacidad`
+(estandarizado en `AppFooter.tsx` y `Footer.tsx`)
+
+### SalaryForm (formulario de salario)
+
+Componente: `@/components/SalaryForm.tsx`
+
+**Patron:** Collapsible form (igual que ReviewForm)
+- Collapsed: prompt "¿Trabajas en {companyName}? Reporta tu salario de forma anonima..."
+- Expanded: formulario completo
+- Submitted: mensaje de exito con icono DollarSign
+
+**Campos:**
+- **Puesto/Cargo** (autocomplete inteligente):
+  - Combobox custom con fuzzy matching
+  - Prioriza posiciones existentes en la empresa (boost +10 puntos)
+  - 80+ puestos curados del mercado peruano, agrupados por categoria
+  - Tolerancia a typos via distancia de Levenshtein (dist <= 2)
+  - Normaliza acentos (`normalize("NFD")`) para comparar
+  - Dropdown: `border-border/40 bg-card shadow-lg`, items `hover:bg-muted/50`
+  - Posiciones existentes muestran "Ya existe en esta empresa" en `text-[10px]`
+- **Nivel**: chips toggle (Practicante/Junior/Mid/Senior/Lead/Gerente/Director)
+  - Activo: `bg-foreground text-background border-foreground`
+  - Inactivo: `bg-muted/30 text-muted-foreground border-border/60`
+- **Salario bruto**: input numerico con prefijo "S/"
+- **Periodo**: toggle buttons (Mensual/Anual)
+- **Anos de experiencia**: input numerico (0-50)
+
+**API flow:**
+1. Fuzzy match titulo contra posiciones existentes (via `normalize()`)
+2. Si match exacto → usa positionId existente
+3. Si nuevo → `api.positions.create({companyId, title, level})`
+4. Luego → `api.salaries.add(positionId, {amount, currency, period, yearsExperience})`
+
+**Integracion:** `company-salarios.tsx` → `<SalaryForm>` arriba de la tabla de salarios
+
+### BenefitForm (formulario de beneficios)
+
+Componente: `@/components/BenefitForm.tsx`
+
+**Patron:** Collapsible form (igual que ReviewForm)
+- Collapsed: prompt "¿Conoces los beneficios de {companyName}? Comparte la informacion..."
+- Expanded: formulario com categorias visuales
+- Submitted: mensaje de exito con icono Heart
+
+**Categorias** (7, inspiradas en levels.fyi):
+| Categoria | Icono | Beneficios ejemplo |
+|---|---|---|
+| Salud y Seguro | Shield | EPS, dental, vida, oncologico, salud mental |
+| Financiero y Retiro | Wallet | Bono anual, utilidades, AFP complementaria |
+| Tiempo Libre | Clock | Vacaciones extra, cumpleanos, home office |
+| Familia | Baby | Licencia maternal/paternal, guarderia, bono escolar |
+| Desarrollo Profesional | GraduationCap | Capacitaciones, certificaciones, maestria |
+| Alimentacion y Transporte | Bus | Vales de alimentos, movilidad, estacionamiento |
+| Perks y Bienestar | Gift | Gimnasio, descuentos, happy hours, team building |
+
+**Campos:**
+- **Categoria**: grid 2x4 de botones con iconos (seleccion unica)
+  - Activo: `bg-foreground text-background border-foreground`
+  - Inactivo: `bg-muted/30 text-muted-foreground border-border/60`
+  - Label: `text-[10px] font-medium`
+- **Beneficio** (autocomplete): combobox filtrado por categoria seleccionada
+  - Muestra 6 sugerencias maximas
+  - Fuzzy matching por palabras
+  - Permite texto libre si no hay match
+- **Descripcion** (opcional): textarea `min-h-20`
+
+**API:** `api.benefits.add({companyId, name, category, description})`
+
+**Integracion:** `company-beneficios.tsx` → `<BenefitForm>` arriba de la lista de beneficios
+

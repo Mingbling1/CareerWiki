@@ -329,6 +329,7 @@ def migrate(oracle_conn, target_db: str, limit: int | None, dry_run: bool):
             cur.execute("SELECT ruc FROM _migration_log WHERE target_db = %s AND status = 'success'", (target_db,))
             migrated_rucs = {row[0] for row in cur.fetchall()}
     except Exception:
+        local_conn.rollback()
         migrated_rucs = set()
 
     print(f"   Already migrated: {len(migrated_rucs):,} companies")

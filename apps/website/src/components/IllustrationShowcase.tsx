@@ -49,7 +49,7 @@ const floatVariants = {
     transition: {
       duration: 4 + i * 0.5,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: 'easeInOut' as const,
     },
   }),
 }
@@ -72,7 +72,7 @@ const fadeUp = {
     y: 0,
     transition: {
       duration: 0.7,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
     },
   },
 }

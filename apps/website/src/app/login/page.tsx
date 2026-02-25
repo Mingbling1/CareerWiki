@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { EmpliqLogo } from "@/components/EmpliqLogo"
 import { LoginForm } from "@/components/login-form"
 
@@ -17,15 +18,32 @@ export default function LoginPage() {
         </div>
       </div>
       <div className="bg-muted relative hidden lg:block">
+        {/* Background illustration */}
+        <div className="absolute inset-0 flex items-center justify-center p-12">
+          <Image
+            src="/illustrations/work/work_collaboration.png"
+            alt="Colaboracion laboral"
+            width={520}
+            height={520}
+            className="object-contain opacity-[0.07] select-none pointer-events-none"
+            priority
+          />
+        </div>
+
+        {/* Content overlay */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="max-w-md space-y-6 p-8">
             <blockquote className="text-lg font-medium text-foreground/80">
               &ldquo;La transparencia laboral empieza cuando las personas se atreven a compartir lo que saben.&rdquo;
             </blockquote>
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-foreground/10 flex items-center justify-center">
-                <span className="text-sm font-semibold text-foreground/60">E</span>
-              </div>
+              <Image
+                src="/avatars/avatar_woman_long_hair.png"
+                alt="Usuario de Empliq"
+                width={40}
+                height={40}
+                className="h-10 w-10 rounded-full object-cover"
+              />
               <div>
                 <p className="text-sm font-medium">Empliq</p>
                 <p className="text-xs text-muted-foreground">Transparencia laboral para el Perú</p>

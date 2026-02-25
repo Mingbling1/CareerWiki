@@ -1,10 +1,23 @@
 # App: Website (`apps/website/`)
 
-> Next.js landing page. Puerto: 3000.
+> Next.js landing page + app. Puerto: 3000.
 
 ## Resumen
 
 Landing page pública de Empliq. Diseño monocromático con micro-dosis de color. Usa Three.js para shader de fondo y Framer Motion para animaciones.
+
+## Configuración de API
+
+El website consume la **API de producción** por defecto:
+
+```env
+# apps/website/.env.local
+NEXT_PUBLIC_API_URL=https://api.musuq.me/api    # producción
+NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000   # auth local
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+```
+
+Para usar el API local: `NEXT_PUBLIC_API_URL=http://localhost:4000/api`
 
 ## Estructura
 

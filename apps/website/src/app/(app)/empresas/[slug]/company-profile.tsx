@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import {
   Building2,
   MapPin,
@@ -13,6 +14,7 @@ import {
   DollarSign,
   Heart,
   ChevronRight,
+  ArrowLeft,
   Loader2,
   Phone,
 } from "lucide-react"
@@ -20,6 +22,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Separator } from "@/components/ui/separator"
 import { api, type Company, type Position, type Review, type Benefit } from "@/lib/api"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function formatSalary(amount: number): string {
   return `S/ ${amount.toLocaleString("es-PE")}`
@@ -91,8 +94,27 @@ export function CompanyProfile({ slug }: { slug: string }) {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="mx-auto max-w-5xl px-4 sm:px-6 py-8 space-y-6">
+        <div className="flex items-start gap-5">
+          <Skeleton className="h-16 w-16 rounded-xl shrink-0" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-7 w-64" />
+            <div className="flex gap-4">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-24 rounded-md" />
+          ))}
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -138,6 +160,17 @@ export function CompanyProfile({ slug }: { slug: string }) {
 
   return (
     <div>
+      {/* Back Navigation */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 pt-4">
+        <Link
+          href="/empresas"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Directorio de Empresas
+        </Link>
+      </div>
+
       {/* Company Header */}
       <div className="bg-card">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8">
@@ -148,7 +181,7 @@ export function CompanyProfile({ slug }: { slug: string }) {
                 <img
                   src={company.logoUrl}
                   alt={company.name}
-                  className="h-full w-full object-contain grayscale"
+                  className="h-full w-full object-contain"
                 />
               ) : (
                 <Building2 className="h-8 w-8 text-muted-foreground" />

@@ -2,7 +2,7 @@
 
 > Definición del producto mínimo viable para la primera versión de Empliq.
 
-## 📋 Índice
+##  Índice
 
 1. [Visión del Producto](#visión-del-producto)
 2. [Actores Principales](#actores-principales)
@@ -84,7 +84,7 @@ Cada puesto tiene:
 
 ## Funcionalidades del MVP
 
-### ✅ Incluido en MVP
+###  Incluido en MVP
 
 | Feature | Descripción |
 |---------|-------------|
@@ -98,7 +98,7 @@ Cada puesto tiene:
 | **Agregar salario** | Reportar salario (anónimo) |
 | **Agregar comentario** | Comentar sobre puesto (anónimo) |
 
-### ❌ NO incluido en MVP (Post-MVP)
+###  NO incluido en MVP (Post-MVP)
 
 - Agregar nuevas empresas
 - Editar organigramas

@@ -1,10 +1,23 @@
 # App: API (`apps/api/`)
 
 > NestJS backend con arquitectura hexagonal. Puerto: 4000.
+>
+> **Producción:** `https://api.musuq.me/api` (repo: `empliq-backend`)
 
 ## Resumen
 
 API REST principal de Empliq. Gestiona empresas, puestos, salarios, comentarios, organigramas y autenticación.
+
+El **website local consume la API de producción** por defecto. El API local (:4000) se mantiene para desarrollo/pruebas de endpoints.
+
+## Repos
+
+| Repo | Propósito |
+|------|-----------|
+| `CareerWiki` (monorepo) `apps/api/` | Desarrollo local, código fuente |
+| `empliq-backend` | Deploy a producción (`api.musuq.me`) |
+
+Cuando se modifica `apps/api/`, sincronizar cambios a `empliq-backend` y hacer push.
 
 ## Estructura
 
@@ -55,27 +68,34 @@ src/
 | AddComment | `/api/comments` | POST |
 | GetComments | `/api/comments?positionId=` | GET |
 
-## Auth Endpoints
+## Auth
 
-| Endpoint | Descripción |
-|----------|-------------|
-| `POST /api/auth/sign-up/email` | Registro |
-| `POST /api/auth/sign-in/email` | Login |
-| `GET /api/auth/sign-in/social` | OAuth redirect |
-| `GET /api/auth/get-session` | Sesión actual |
-| `POST /api/auth/sign-out` | Cerrar sesión |
+La autenticación usa **Supabase GoTrue** self-hosted (no Better Auth).
+
+- OAuth (Google) se maneja en GoTrue via Kong (`/auth/v1/*`)
+- El API recibe JWTs en header `Authorization: Bearer <jwt>`
+- `SupabaseAuthGuard` valida el JWT y extrae el usuario
 
 ## Variables de Entorno
 
 ```env
-DATABASE_URL=postgresql://user:password@localhost:5432/empliq
-BETTER_AUTH_SECRET=your-secret-key-min-32-chars
-BETTER_AUTH_URL=http://localhost:4000
-GOOGLE_CLIENT_ID=xxx
-GOOGLE_CLIENT_SECRET=xxx
+PORT=4000
+NODE_ENV=development
+DATABASE_URL=postgresql://empliq:empliq_dev_password@localhost:5432/empliq
+CORS_ORIGINS=http://localhost:3000
+SUPABASE_URL=http://localhost:8000
+SUPABASE_JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 ORACLE_PAR_UPLOAD_URL=https://objectstorage.../o/
 ORACLE_PUBLIC_URL_BASE=https://objectstorage.../o/
 ```
+
+## Storage
+
+**No usa Supabase Storage.** Los archivos se suben a Oracle Object Storage
+usando PAR (Pre-Authenticated Request) con `fetch()` PUT.
+
+Archivo: `src/infrastructure/storage/storage.service.ts`
 
 ## Pendiente
 

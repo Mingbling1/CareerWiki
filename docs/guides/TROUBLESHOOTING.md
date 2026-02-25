@@ -56,7 +56,7 @@ docker exec -it empliq-postgres psql -U empliq -d empliq
 ### Prisma migration falla
 
 ```bash
-# Reset completo (⚠️ borra datos)
+# Reset completo ( borra datos)
 cd apps/api
 npx prisma migrate reset
 
@@ -107,6 +107,39 @@ docker logs empliq-website --tail 50
 cd apps/website
 npm run build
 ```
+
+### Module not found en Docker (react-hook-form, @hookform/resolvers, etc.)
+
+**Síntoma:** `Module not found: Can't resolve 'react-hook-form'` o `@hookform/resolvers/zod`
+solo en Docker, pero funciona en local.
+
+**Causa:** El `docker-compose.dev.yml` usa un **anonymous volume** (`- /app/node_modules`)
+para preservar `node_modules` del container separados del host. Cuando se agregan nuevas
+dependencias al `package.json` del website, el volume anónimo antiguo persiste con su
+`node_modules` obsoleto y no incluye los nuevos paquetes.
+
+**Solución:**
+
+```bash
+cd docker
+
+# 1. Parar y eliminar el container + su volume anónimo
+docker compose -f docker-compose.dev.yml stop website
+docker rm -v empliq-website
+
+# 2. Rebuild sin cache (fuerza npm install fresco)
+docker compose -f docker-compose.dev.yml build --no-cache website
+
+# 3. Levantar con volume nuevo
+docker compose -f docker-compose.dev.yml up -d website
+
+# 4. Verificar paquetes dentro del container
+docker exec empliq-website ls node_modules/react-hook-form
+docker exec empliq-website ls node_modules/@hookform/resolvers/zod
+```
+
+**Regla:** Cada vez que se agrega una dependencia nueva al `package.json` del website,
+se debe hacer rebuild del container con `--no-cache` y eliminar el volume anónimo.
 
 ### Shader no renderiza
 

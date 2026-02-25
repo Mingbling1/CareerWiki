@@ -2,7 +2,7 @@
 
 > Documentación del pipeline de datos para poblar perfiles de empresas.
 
-## 📊 Análisis del Padrón RUC (Perú)
+##  Análisis del Padrón RUC (Perú)
 
 ### Resumen de Datos
 
@@ -18,9 +18,9 @@
 
 | Tier | Criterio | Empresas | Prioridad |
 |------|----------|----------|-----------|
-| **Tier 1** | ≥1000 trabajadores | 915 | 🔴 Alta |
-| **Tier 2** | 500-999 trabajadores | 798 | 🟠 Media-Alta |
-| **Tier 3** | 100-499 trabajadores | 4,410 | 🟡 Media |
+| **Tier 1** | ≥1000 trabajadores | 915 |  Alta |
+| **Tier 2** | 500-999 trabajadores | 798 |  Media-Alta |
+| **Tier 3** | 100-499 trabajadores | 4,410 |  Media |
 | **Total Prioridad** | ≥100 trabajadores | **6,123** | - |
 
 ### Top 10 Sectores (Empresas Prioridad)
@@ -46,7 +46,7 @@
 
 ---
 
-## 🔄 Pipeline de Datos (n8n)
+##  Pipeline de Datos (n8n)
 
 ### Arquitectura v6 — DatosPeru Only
 
@@ -76,7 +76,7 @@
 - El scrape de websites es lento, frágil y la mayoría de empresas peruanas no tiene web propia
 - Para el MVP, los datos de DatosPeru son suficientes. La búsqueda web queda como feature secundario.
 
-### Paso 1: Enriquecimiento con DatosPeru ✅ PRODUCCIÓN
+### Paso 1: Enriquecimiento con DatosPeru  PRODUCCIÓN
 
 Para cada empresa, el scraper API consulta datosperu.org y extrae:
 
@@ -120,7 +120,7 @@ ON CONFLICT (ruc) DO UPDATE SET
 
 ### Paso 3 (Secundario / Post-MVP): Búsqueda de Website
 
-> ⚠️ **DESACTIVADO en v6** — La búsqueda web (DDG/Bing) producía falsos positivos
+>  **DESACTIVADO en v6** — La búsqueda web (DDG/Bing) producía falsos positivos
 > (ej: datosperu.org como "website oficial"). Queda como feature secundario.
 
 El scraper API aún tiene los endpoints `/search` y `/scrape/url` disponibles,
@@ -129,7 +129,7 @@ pero el workflow v6 no los usa. Si se reactivan, la blacklist ya incluye
 
 ### Paso 4 (Secundario / Post-MVP): Extracción de Información Web
 
-> ⚠️ **DESACTIVADO en v6** — Cuando se reactive la búsqueda web, se extraerá:
+>  **DESACTIVADO en v6** — Cuando se reactive la búsqueda web, se extraerá:
 
 | Campo | Fuente | Método |
 |-------|--------|--------|
@@ -158,7 +158,7 @@ Usamos Claude/GPT para:
 
 ---
 
-## 🛠️ APIs Recomendadas (Tier Free)
+##  APIs Recomendadas (Tier Free)
 
 ### Para Búsqueda Web
 
@@ -187,7 +187,7 @@ Usamos Claude/GPT para:
 
 ---
 
-## 📁 Archivos Generados
+##  Archivos Generados
 
 ```
 /home/jimmy/sueldos-organigrama/data/
@@ -208,7 +208,7 @@ Usamos Claude/GPT para:
 
 ---
 
-## 🚀 Estrategia de Implementación
+##  Estrategia de Implementación
 
 ### Fase 1: Tier 1 (915 empresas)
 - Scraping manual de las top 50
@@ -233,7 +233,7 @@ Usamos Claude/GPT para:
 
 ---
 
-## 📝 Campos del Perfil de Empresa
+##  Campos del Perfil de Empresa
 
 ### Desde RUC (Disponible)
 
@@ -268,7 +268,7 @@ interface DatosWebsite {
 }
 ```
 
-### Desde DatosPeru (Producción ✅)
+### Desde DatosPeru (Producción )
 
 ```typescript
 interface DatosPeruEnrichment {

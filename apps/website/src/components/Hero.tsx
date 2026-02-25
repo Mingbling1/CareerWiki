@@ -29,7 +29,7 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.6,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
     },
   },
 }
@@ -42,7 +42,7 @@ const letterVariants = {
     transition: {
       duration: 0.5,
       delay: i * 0.03,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
     },
   }),
 }
@@ -56,7 +56,7 @@ const dashboardVariants = {
     transition: {
       duration: 0.8,
       delay: 0.4,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
     },
   },
 }
@@ -69,7 +69,7 @@ const floatingCardVariants = {
     transition: {
       duration: 0.5,
       delay: delay,
-      ease: [0.25, 0.1, 0.25, 1],
+      ease: [0.25, 0.1, 0.25, 1] as [number, number, number, number],
     },
   }),
 }
@@ -171,7 +171,7 @@ export function Hero() {
             {/* CTA Buttons */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-4">
               <a
-                href="http://localhost:5173"
+                href="/empresas"
                 className="inline-flex items-center gap-2 bg-neutral-900 text-white px-6 py-3 rounded-lg font-medium hover:bg-neutral-800 transition-all hover:gap-3"
               >
                 Explorar empresas
@@ -200,7 +200,7 @@ export function Hero() {
                 </div>
                 <div className="flex-1 flex justify-center">
                   <div className="bg-neutral-100 rounded-lg px-4 py-1 text-neutral-500 text-sm font-mono">
-                    app.empliq.com
+                    empliq.io/empresas
                   </div>
                 </div>
               </div>

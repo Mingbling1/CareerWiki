@@ -49,9 +49,9 @@ export function LogoCloud() {
         <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-white to-transparent z-10" />
         <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-white to-transparent z-10" />
 
-        {/* Scrolling logos */}
+        {/* Scrolling logos — tripled for seamless loop */}
         <div className="flex animate-marquee">
-          {[...logos, ...logos].map((logo, i) => (
+          {[...logos, ...logos, ...logos].map((logo, i) => (
             <div
               key={i}
               className="flex items-center justify-center mx-12 shrink-0"

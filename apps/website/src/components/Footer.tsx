@@ -7,8 +7,8 @@ const footerLinks = {
     links: [
       { label: 'Explorar Puestos', href: '/puestos' },
       { label: 'Comparar Salarios', href: '/salarios' },
-      { label: 'Ver Organigramas', href: '/organigramas' },
-      { label: 'Comunidad', href: '/comunidad' },
+      // { label: 'Ver Organigramas', href: '/organigramas' },
+      // { label: 'Comunidad', href: '/comunidad' },
     ],
   },
 
@@ -19,8 +19,8 @@ const footerLinks = {
       { label: 'Blog', href: '/blog' },
       { label: 'Empleo', href: '/empleo' },
       { label: 'Contacto', href: '/contacto' },
-      { label: 'Privacidad', href: '/privacidad' },
-      { label: 'Términos', href: '/terminos' },
+      { label: 'Términos de servicio', href: '/terminos' },
+      { label: 'Política de privacidad', href: '/privacidad' },
     ],
   },
 }
