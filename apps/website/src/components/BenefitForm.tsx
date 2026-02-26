@@ -22,6 +22,8 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { getAuthToken } from "@/lib/auth-helpers"
+import { sileo } from "sileo"
 
 /* ─── Benefit Categories & Known Benefits ─── */
 
@@ -310,7 +312,9 @@ export function BenefitForm({ companyId, companyName, onSuccess }: BenefitFormPr
   const onSubmit = async (data: BenefitFormData) => {
     setSubmitting(true)
     try {
-      await api.benefits.add({
+      const token = await getAuthToken()
+
+      await api.benefits.add(token, {
         companyId,
         name: data.name,
         category: data.category,
@@ -324,8 +328,11 @@ export function BenefitForm({ companyId, companyName, onSuccess }: BenefitFormPr
         setSubmitted(false)
         setIsExpanded(false)
       }, 3000)
-    } catch {
-      // Silently handle — in production, show toast
+    } catch (err) {
+      const msg = err instanceof Error && err.message === "NO_AUTH"
+        ? "Inicia sesi\u00f3n para reportar beneficios."
+        : "Hubo un problema al guardar el beneficio. Intenta de nuevo."
+      sileo.error({ title: "Error", description: msg })
     } finally {
       setSubmitting(false)
     }

@@ -10,7 +10,7 @@ function formatSalary(amount: number): string {
 }
 
 export function CompanySalarios() {
-  const { company, positions } = useCompany()
+  const { company, positions, refetch } = useCompany()
 
   return (
     <div className="space-y-6">
@@ -20,6 +20,7 @@ export function CompanySalarios() {
           companyId={company.id}
           companyName={company.name}
           positions={positions}
+          onSuccess={refetch}
         />
       )}
 

@@ -1,15 +1,86 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect, useMemo } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Star, Send, Briefcase, ChevronDown } from "lucide-react"
+import { Star, Send, Briefcase, ChevronDown, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import { api } from "@/lib/api"
+import { api, type Position } from "@/lib/api"
+import { getAuthToken } from "@/lib/auth-helpers"
+import { sileo } from "sileo"
+
+/* ─── Curated Job Titles (Perú) ─── */
+
+const COMMON_JOB_TITLES: Record<string, string[]> = {
+  "Tecnología": [
+    "Desarrollador Full Stack", "Desarrollador Frontend", "Desarrollador Backend",
+    "Desarrollador Móvil", "Ingeniero DevOps", "Ingeniero de Datos",
+    "Analista de Datos", "Científico de Datos", "Arquitecto de Software",
+    "Tech Lead", "QA Engineer", "Analista de Sistemas",
+    "Product Manager", "UX Designer",
+  ],
+  "Finanzas": [
+    "Analista Financiero", "Controller Financiero", "Contador General",
+    "Auditor Interno", "Analista de Riesgos", "Gerente de Finanzas",
+  ],
+  "Marketing y Ventas": [
+    "Gerente de Marketing", "Ejecutivo de Ventas", "Community Manager",
+    "Analista de Marketing Digital", "Ejecutivo Comercial", "Gerente Comercial",
+  ],
+  "RRHH": [
+    "Gerente de RRHH", "Analista de Compensaciones", "Recruiter",
+    "Business Partner RRHH",
+  ],
+  "Operaciones": [
+    "Gerente de Operaciones", "Jefe de Logística", "Analista de Procesos",
+    "Supervisor de Producción",
+  ],
+  "Ingeniería": [
+    "Ingeniero Civil", "Ingeniero Industrial", "Ingeniero de Minas",
+    "Ingeniero Eléctrico", "Ingeniero Mecánico",
+  ],
+  "Legal": [
+    "Abogado Senior", "Jefe Legal", "Analista de Compliance",
+  ],
+  "Administración": [
+    "Asistente Ejecutivo", "Asistente Administrativo",
+    "Gerente de Administración",
+  ],
+}
+
+const ALL_JOB_TITLES = Object.entries(COMMON_JOB_TITLES).flatMap(
+  ([category, titles]) => titles.map((t) => ({ title: t, category }))
+)
+
+/* ─── Fuzzy Match ─── */
+
+function normalize(str: string): string {
+  return str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+}
+
+function fuzzyScore(query: string, target: string): number {
+  const q = normalize(query)
+  const t = normalize(target)
+  if (t === q) return 100
+  if (t.startsWith(q)) return 90
+  if (t.includes(q)) return 70
+  const queryWords = q.split(/\s+/)
+  const targetWords = t.split(/\s+/)
+  let matchedWords = 0
+  for (const qw of queryWords) {
+    if (targetWords.some((tw: string) => tw.startsWith(qw) || tw.includes(qw))) matchedWords++
+  }
+  if (matchedWords > 0) return 30 + (matchedWords / queryWords.length) * 40
+  return 0
+}
 
 /* ─── Schema ─── */
 
@@ -35,7 +106,6 @@ function StarRating({
   error?: string
 }) {
   const [hover, setHover] = useState(0)
-
   const labels = ["", "Muy mal", "Mal", "Regular", "Bueno", "Excelente"]
 
   return (
@@ -73,15 +143,126 @@ function StarRating({
   )
 }
 
+/* ─── Job Title Combobox (reutilizado de SalaryForm) ─── */
+
+interface ComboboxProps {
+  value: string
+  onChange: (value: string) => void
+  existingPositions: Position[]
+  error?: string
+}
+
+function JobTitleCombobox({ value, onChange, existingPositions, error }: ComboboxProps) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState(value)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => { setQuery(value) }, [value])
+
+  const suggestions = useMemo(() => {
+    if (!query || query.length < 2) return []
+
+    type Suggestion = { title: string; category: string; isExisting: boolean; score: number }
+    const results: Suggestion[] = []
+
+    for (const pos of existingPositions) {
+      const score = fuzzyScore(query, pos.title)
+      if (score > 20) {
+        results.push({
+          title: pos.title,
+          category: pos.category?.name || "Esta empresa",
+          isExisting: true,
+          score: score + 10,
+        })
+      }
+    }
+
+    for (const item of ALL_JOB_TITLES) {
+      const score = fuzzyScore(query, item.title)
+      if (score > 20) {
+        if (!results.some((r) => normalize(r.title) === normalize(item.title))) {
+          results.push({ title: item.title, category: item.category, isExisting: false, score })
+        }
+      }
+    }
+
+    return results.sort((a, b) => b.score - a.score).slice(0, 8)
+  }, [query, existingPositions])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        listRef.current && !listRef.current.contains(e.target as Node) &&
+        inputRef.current && !inputRef.current.contains(e.target as Node)
+      ) { setOpen(false) }
+    }
+    document.addEventListener("mousedown", handleClick)
+    return () => document.removeEventListener("mousedown", handleClick)
+  }, [])
+
+  return (
+    <div className="relative">
+      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+        Cargo
+      </label>
+      <div className="relative">
+        <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); onChange(e.target.value); setOpen(true) }}
+          onFocus={() => query.length >= 2 && setOpen(true)}
+          placeholder="Ej: Desarrollador Full Stack"
+          className="pl-9 h-9 text-sm bg-muted/30 border-border/60"
+          autoComplete="off"
+        />
+      </div>
+
+      {open && suggestions.length > 0 && (
+        <div ref={listRef} className="absolute z-50 mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden">
+          <div className="max-h-60 overflow-y-auto py-1">
+            {suggestions.map((s, i) => {
+              const isSelected = normalize(value) === normalize(s.title)
+              return (
+                <button
+                  key={`${s.title}-${i}`}
+                  type="button"
+                  onClick={() => { onChange(s.title); setQuery(s.title); setOpen(false) }}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors",
+                    isSelected && "bg-muted/30"
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("truncate", s.isExisting && "font-medium")}>{s.title}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {s.isExisting ? "Ya existe en esta empresa" : s.category}
+                    </p>
+                  </div>
+                  {isSelected && <Check className="h-3.5 w-3.5 text-foreground shrink-0" />}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {error && <p className="text-xs text-destructive mt-1">{error}</p>}
+    </div>
+  )
+}
+
 /* ─── Review Form ─── */
 
 interface ReviewFormProps {
   companyId: string
   companyName: string
+  positions?: Position[]
   onSuccess?: () => void
 }
 
-export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProps) {
+export function ReviewForm({ companyId, companyName, positions = [], onSuccess }: ReviewFormProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -107,17 +288,21 @@ export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProp
   const rating = watch("rating")
   const isCurrentEmployee = watch("isCurrentEmployee")
   const commentLength = watch("comment")?.length || 0
+  const jobTitle = watch("jobTitle")
 
   const onSubmit = async (data: ReviewFormData) => {
     setSubmitting(true)
     try {
-      await api.reviews.add({
+      const token = await getAuthToken()
+
+      await api.reviews.add(token, {
         companyId,
         rating: data.rating,
         title: data.title,
         pros: data.comment,
         isCurrentEmployee: data.isCurrentEmployee,
       })
+
       setSubmitted(true)
       reset()
       onSuccess?.()
@@ -125,8 +310,11 @@ export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProp
         setSubmitted(false)
         setIsExpanded(false)
       }, 3000)
-    } catch {
-      // Silently handle — in production, show toast
+    } catch (err) {
+      const msg = err instanceof Error && err.message === "NO_AUTH"
+        ? "Inicia sesión para escribir tu reseña."
+        : "Hubo un problema al publicar tu reseña. Intenta de nuevo."
+      sileo.error({ title: "Error", description: msg })
     } finally {
       setSubmitting(false)
     }
@@ -207,22 +395,12 @@ export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProp
 
         {/* Employment status + Job title row */}
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Cargo
-            </label>
-            <div className="relative">
-              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                {...register("jobTitle")}
-                placeholder="Ej: Analista de TI"
-                className="pl-9 h-9 text-sm bg-muted/30 border-border/60"
-              />
-            </div>
-            {errors.jobTitle && (
-              <p className="text-xs text-destructive mt-1">{errors.jobTitle.message}</p>
-            )}
-          </div>
+          <JobTitleCombobox
+            value={jobTitle}
+            onChange={(v) => setValue("jobTitle", v, { shouldValidate: true })}
+            existingPositions={positions}
+            error={errors.jobTitle?.message}
+          />
 
           <div>
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
@@ -256,7 +434,7 @@ export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProp
           )}
         </div>
 
-        {/* Comment (replaces pros/cons) */}
+        {/* Comment */}
         <div>
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
             Tu experiencia
@@ -277,9 +455,7 @@ export function ReviewForm({ companyId, companyName, onSuccess }: ReviewFormProp
             <span
               className={cn(
                 "text-xs tabular-nums",
-                commentLength > 1800
-                  ? "text-destructive"
-                  : "text-muted-foreground"
+                commentLength > 1800 ? "text-destructive" : "text-muted-foreground"
               )}
             >
               {commentLength}/2000

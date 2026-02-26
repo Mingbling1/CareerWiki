@@ -1,7 +1,8 @@
 "use client"
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
 import { api, type Company, type Position, type Review, type Benefit } from "@/lib/api"
+import { getAuthTokenSafe } from "@/lib/auth-helpers"
 
 interface CompanyContextType {
   company: Company | null
@@ -10,6 +11,8 @@ interface CompanyContextType {
   benefits: Benefit[]
   loading: boolean
   error: string | null
+  /** Re-fetch all company data from the API (call after mutations) */
+  refetch: () => void
 }
 
 const CompanyContext = createContext<CompanyContextType>({
@@ -19,6 +22,7 @@ const CompanyContext = createContext<CompanyContextType>({
   benefits: [],
   loading: true,
   error: null,
+  refetch: () => {},
 })
 
 export function useCompany() {
@@ -33,7 +37,7 @@ export function CompanyProvider({ slug, children }: { slug: string; children: Re
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     setLoading(true)
     setError(null)
 
@@ -42,9 +46,12 @@ export function CompanyProvider({ slug, children }: { slug: string; children: Re
       .then(async (companyData) => {
         setCompany(companyData)
 
+        // Get auth token for vote status (non-throwing)
+        const token = await getAuthTokenSafe()
+
         const [posData, revData, benData] = await Promise.all([
           api.positions.getByCompany(companyData.id).catch(() => []),
-          api.reviews.getByCompany(companyData.id).catch(() => []),
+          api.reviews.getByCompany(companyData.id, token ?? undefined).catch(() => []),
           api.benefits.getByCompany(companyData.id).catch(() => []),
         ])
         setPositions(posData)
@@ -59,8 +66,12 @@ export function CompanyProvider({ slug, children }: { slug: string; children: Re
       })
   }, [slug])
 
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
   return (
-    <CompanyContext.Provider value={{ company, positions, reviews, benefits, loading, error }}>
+    <CompanyContext.Provider value={{ company, positions, reviews, benefits, loading, error, refetch: fetchData }}>
       {children}
     </CompanyContext.Provider>
   )

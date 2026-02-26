@@ -5,7 +5,7 @@ import { useCompany } from "../company-context"
 import { BenefitForm } from "@/components/BenefitForm"
 
 export function CompanyBeneficios() {
-  const { company, benefits } = useCompany()
+  const { company, benefits, refetch } = useCompany()
 
   const benefitsByCategory = benefits.reduce(
     (acc, benefit) => {
@@ -24,6 +24,7 @@ export function CompanyBeneficios() {
         <BenefitForm
           companyId={company.id}
           companyName={company.name}
+          onSuccess={refetch}
         />
       )}
 

@@ -121,8 +121,11 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
   const userEmail = user?.email || ""
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null)
   const [savedAvatar, setSavedAvatar] = useState<string | null>(null)
+  const [nickname, setNickname] = useState("")
+  const [savedNickname, setSavedNickname] = useState("")
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
+  const [nicknameError, setNicknameError] = useState<string | null>(null)
 
   // Load current profile avatar from API
   useEffect(() => {
@@ -135,21 +138,36 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
           setSelectedAvatar(profile.avatarUrl)
           setSavedAvatar(profile.avatarUrl)
         }
+        if (profile.nickname) {
+          setNickname(profile.nickname)
+          setSavedNickname(profile.nickname)
+        }
       }).catch(() => {})
     })
   }, [user])
 
   const handleSave = async () => {
-    if (!selectedAvatar || !user) return
+    if (!user) return
     setSaving(true)
     setSaveSuccess(false)
+    setNicknameError(null)
     try {
       const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) return
 
-      await api.profiles.updateAvatar(session.access_token, selectedAvatar)
-      setSavedAvatar(selectedAvatar)
+      // Save avatar if changed
+      if (selectedAvatar && selectedAvatar !== savedAvatar) {
+        await api.profiles.updateAvatar(session.access_token, selectedAvatar)
+        setSavedAvatar(selectedAvatar)
+      }
+
+      // Save nickname if changed
+      if (nickname !== savedNickname && nickname.length >= 3) {
+        await api.profiles.updateNickname(session.access_token, nickname)
+        setSavedNickname(nickname)
+      }
+
       setSaveSuccess(true)
       setTimeout(() => setSaveSuccess(false), 3000)
 
@@ -157,14 +175,25 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
       const { revalidateProfile } = await import("@/app/(app)/actions")
       await revalidateProfile()
       router.refresh()
-    } catch (err) {
-      console.error("Error saving avatar:", err)
+    } catch (err: any) {
+      if (err?.message?.includes("nickname") || err?.message?.includes("Nickname")) {
+        setNicknameError("Ese nickname ya está en uso")
+      } else {
+        console.error("Error saving profile:", err)
+      }
     } finally {
       setSaving(false)
     }
   }
 
-  const hasChanges = selectedAvatar !== savedAvatar && selectedAvatar !== null
+  const handleNicknameChange = (value: string) => {
+    setNicknameError(null)
+    setNickname(value)
+  }
+
+  const avatarChanged = selectedAvatar !== savedAvatar && selectedAvatar !== null
+  const nicknameChanged = nickname !== savedNickname && nickname.length >= 3
+  const hasChanges = avatarChanged || nicknameChanged
 
   return (
     <div className="space-y-6">
@@ -280,7 +309,27 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
           />
         </div>
 
-
+        <div className="space-y-2">
+          <Label htmlFor="nickname" className="text-sm">Nickname</Label>
+          <Input
+            id="nickname"
+            value={nickname}
+            onChange={(e) => handleNicknameChange(e.target.value)}
+            placeholder="Ej: VelozCóndor4521"
+            className={cn(
+              "bg-muted/50 border-border/60",
+              nicknameError && "border-red-500 focus-visible:ring-red-500"
+            )}
+            maxLength={30}
+          />
+          {nicknameError ? (
+            <p className="text-xs text-red-500">{nicknameError}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Visible en tus reseñas. Mínimo 3 caracteres.
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -300,7 +349,7 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
         </Button>
         {saveSuccess && (
           <p className="text-xs text-green-600 font-medium">
-            Avatar guardado correctamente
+            Cambios guardados correctamente
           </p>
         )}
       </div>

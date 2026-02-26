@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog"
 import { api, type Company, type Position } from "@/lib/api"
 import { createClient } from "@/lib/supabase/client"
+import { getAuthToken } from "@/lib/auth-helpers"
+import { revalidateCompanyData } from "@/app/(app)/actions"
 import { sileo } from "sileo"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -227,9 +229,9 @@ function CompanySearchInput({
       {open && results.length > 0 && (
         <div
           ref={listRef}
-          className="absolute z-50 mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden"
+          className="absolute z-[100] mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden"
         >
-          <div className="max-h-48 overflow-y-auto py-1">
+          <div className="max-h-60 overflow-y-auto py-1">
             {results.map((company) => (
               <button
                 key={company.id}
@@ -395,13 +397,14 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
     if (!selectedCompany) return
     setSubmitting(true)
     try {
+      const token = await getAuthToken()
       const existingPos = positions.find((p) => normalize(p.title) === normalize(data.jobTitle))
       let positionId: string
 
       if (existingPos) {
         positionId = existingPos.id
       } else {
-        const newPos = await api.positions.create({
+        const newPos = await api.positions.create(token, {
           companyId: selectedCompany.id,
           title: data.jobTitle,
           level: data.level || undefined,
@@ -409,7 +412,7 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
         positionId = newPos.id
       }
 
-      await api.salaries.add(positionId, {
+      await api.salaries.add(token, positionId, {
         amount: data.amount,
         currency: data.currency,
         period: data.period,
@@ -417,11 +420,15 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
       })
 
       reset()
+      revalidateCompanyData()
       onSuccess()
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error && err.message === "NO_AUTH"
+        ? "Inicia sesi\u00f3n para reportar tu salario."
+        : "Hubo un problema al guardar tu salario. Intenta de nuevo."
       sileo.error({
         title: "Error al enviar",
-        description: "Hubo un problema al guardar tu salario. Intenta de nuevo.",
+        description: msg,
       })
     } finally {
       setSubmitting(false)
@@ -430,15 +437,17 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Company search */}
-      <CompanySearchInput
-        selectedCompany={selectedCompany}
-        onSelect={setSelectedCompany}
-      />
+      {/* Company search - overflow-visible to allow dropdown to escape */}
+      <div className="relative overflow-visible">
+        <CompanySearchInput
+          selectedCompany={selectedCompany}
+          onSelect={setSelectedCompany}
+        />
+      </div>
 
-      {/* Job Title */}
+      {/* Scrollable area for the rest of the form (once company selected) */}
       {selectedCompany && (
-        <>
+        <div className="max-h-[55vh] overflow-y-auto space-y-5 -mx-1 px-1">
           <JobTitleComboboxInline
             value={jobTitle}
             onChange={(v) => setValue("jobTitle", v, { shouldValidate: true })}
@@ -545,7 +554,7 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
               )}
             </Button>
           </div>
-        </>
+        </div>
       )}
     </form>
   )
@@ -780,7 +789,7 @@ export function ContributionPrompt() {
 
       {/* Dialog with embedded form */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-visible">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />

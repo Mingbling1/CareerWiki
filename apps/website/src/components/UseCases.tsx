@@ -5,27 +5,27 @@ import { motion } from 'framer-motion'
 
 const useCases = [
   {
-    title: 'Explorar Puestos',
-    description: 'Descubre roles y responsabilidades reales de miles de puestos en Perú.',
-    href: '/puestos',
+    title: 'Conoce las Empresas',
+    description: 'No te vayas a ciegas, causa. Investiga sueldos, beneficios y reseñas reales antes de aceptar una oferta.',
+    href: '/empresas',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
       </svg>
     ),
-    features: ['Descripciones detalladas', 'Requisitos reales', 'Trayectorias de carrera'],
+    features: ['Resenas de empleados reales', 'Beneficios detallados', '19,000+ empresas peruanas'],
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
-    title: 'Comparar Salarios',
-    description: 'Datos reales y verificados de compensaciones en diferentes industrias.',
+    title: 'Compara tu Sueldo',
+    description: 'Tu chamba vale mas de lo que crees. Compara tu sueldo con miles de profesionales en tu industria.',
     href: '/salarios',
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
-    features: ['Rangos por experiencia', 'Beneficios incluidos', 'Tendencias del mercado'],
+    features: ['Rangos por experiencia', 'Datos verificados por comunidad', 'Tendencias del mercado peruano'],
     gradient: 'from-green-500 to-emerald-500',
   },
   // TODO: Habilitar cuando estén implementados para MVP
@@ -94,17 +94,17 @@ export function UseCases() {
           className="text-center mb-16"
         >
           <p className="text-neutral-500 font-medium mb-4 tracking-wider uppercase text-sm">
-            Casos de uso
+            Para que no te cuenteen
           </p>
           <h2 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-6">
-            Usa Empliq para construir{' '}
+            Tu siguiente chamba,{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
-              tu carrera.
+              con los ojos bien abiertos.
             </span>
           </h2>
           <p className="text-xl text-neutral-600 max-w-2xl mx-auto">
-            Desde explorar nuevas oportunidades hasta negociar tu salario,
-            tenemos las herramientas que necesitas.
+            Antes de firmar, enterate cuanto pagan, como tratan a su gente
+            y si de verdad vale la pena.
           </p>
         </motion.div>
 

@@ -5,7 +5,7 @@ import { ReviewForm } from "@/components/ReviewForm"
 import { ReviewList } from "@/components/ReviewList"
 
 export function CompanyResenas() {
-  const { company, reviews, loading } = useCompany()
+  const { company, positions, reviews, loading, refetch } = useCompany()
 
   return (
     <div className="space-y-6">
@@ -14,11 +14,13 @@ export function CompanyResenas() {
         <ReviewForm
           companyId={company.id}
           companyName={company.name}
+          positions={positions}
+          onSuccess={refetch}
         />
       )}
 
       {/* Reviews List */}
-      <ReviewList reviews={reviews} loading={loading} />
+      <ReviewList reviews={reviews} loading={loading} onVoteChange={refetch} />
     </div>
   )
 }

@@ -12,3 +12,12 @@ export async function revalidateProfile() {
   updateTag("user-profile")
   refresh()
 }
+
+/**
+ * Server action to invalidate company data cache.
+ * Call this after submitting salary, review, or benefit data.
+ */
+export async function revalidateCompanyData() {
+  updateTag("company-data")
+  refresh()
+}

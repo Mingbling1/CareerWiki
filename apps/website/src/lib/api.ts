@@ -79,6 +79,10 @@ export interface Review {
   pros: string | null
   cons: string | null
   isCurrentEmployee: boolean
+  helpfulCount: number
+  hasVoted?: boolean
+  authorNickname: string | null
+  authorAvatarUrl: string | null
   createdAt: string
 }
 
@@ -105,6 +109,7 @@ export interface Profile {
   id: string
   email: string | null
   name: string | null
+  nickname: string | null
   avatarUrl: string | null
   role: string
   createdAt: string
@@ -154,8 +159,8 @@ export const api = {
   },
   positions: {
     getByCompany: (companyId: string) => fetchAPI<Position[]>(`/companies/${companyId}/positions`),
-    create: (data: { companyId: string; title: string; categoryId?: string; level?: string }) =>
-      fetchAPI<Position>("/positions", {
+    create: (token: string, data: { companyId: string; title: string; categoryId?: string; level?: string }) =>
+      fetchAPIAuth<Position>("/positions", token, {
         method: "POST",
         body: JSON.stringify(data),
       }),
@@ -165,24 +170,33 @@ export const api = {
       fetchAPI<{ avg: number; min: number; max: number; median: number; count: number }>(
         `/positions/${positionId}/salaries/stats`
       ),
-    add: (positionId: string, data: { amount: number; currency: string; period: string; yearsExperience?: number }) =>
-      fetchAPI<Salary>(`/positions/${positionId}/salaries`, {
+    add: (token: string, positionId: string, data: { amount: number; currency: string; period: string; yearsExperience?: number }) =>
+      fetchAPIAuth<Salary>(`/positions/${positionId}/salaries`, token, {
         method: "POST",
         body: JSON.stringify(data),
       }),
   },
   reviews: {
-    getByCompany: (companyId: string) => fetchAPI<Review[]>(`/companies/${companyId}/reviews`),
-    add: (data: { companyId: string; positionId?: string; rating: number; title?: string; pros?: string; cons?: string; isCurrentEmployee?: boolean }) =>
-      fetchAPI<Review>("/reviews", {
+    getByCompany: (companyId: string, token?: string) => {
+      if (token) {
+        return fetchAPIAuth<Review[]>(`/companies/${companyId}/reviews`, token)
+      }
+      return fetchAPI<Review[]>(`/companies/${companyId}/reviews`)
+    },
+    add: (token: string, data: { companyId: string; positionId?: string; rating: number; title?: string; pros?: string; cons?: string; isCurrentEmployee?: boolean }) =>
+      fetchAPIAuth<Review>("/reviews", token, {
         method: "POST",
         body: JSON.stringify(data),
+      }),
+    toggleVote: (token: string, reviewId: string) =>
+      fetchAPIAuth<{ voted: boolean; helpfulCount: number }>(`/reviews/${reviewId}/vote`, token, {
+        method: "POST",
       }),
   },
   benefits: {
     getByCompany: (companyId: string) => fetchAPI<Benefit[]>(`/companies/${companyId}/benefits`),
-    add: (data: { companyId: string; name: string; category: string; description?: string }) =>
-      fetchAPI<Benefit>("/benefits", {
+    add: (token: string, data: { companyId: string; name: string; category: string; description?: string }) =>
+      fetchAPIAuth<Benefit>("/benefits", token, {
         method: "POST",
         body: JSON.stringify(data),
       }),
@@ -208,6 +222,11 @@ export const api = {
       fetchAPIAuth<Profile>("/profiles/me/avatar", token, {
         method: "PATCH",
         body: JSON.stringify({ avatarUrl }),
+      }),
+    updateNickname: (token: string, nickname: string) =>
+      fetchAPIAuth<Profile>("/profiles/me/nickname", token, {
+        method: "PATCH",
+        body: JSON.stringify({ nickname }),
       }),
   },
 }

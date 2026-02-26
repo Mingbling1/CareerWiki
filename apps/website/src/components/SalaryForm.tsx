@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { api, type Position } from "@/lib/api"
+import { getAuthToken } from "@/lib/auth-helpers"
+import { sileo } from "sileo"
 
 /* ─── Curated Job Titles (Perú) ─── */
 
@@ -371,6 +373,8 @@ export function SalaryForm({ companyId, companyName, positions, onSuccess }: Sal
   const onSubmit = async (data: SalaryFormData) => {
     setSubmitting(true)
     try {
+      const token = await getAuthToken()
+
       // Find existing position by fuzzy match
       const existingPos = positions.find(
         (p) => normalize(p.title) === normalize(data.jobTitle)
@@ -382,7 +386,7 @@ export function SalaryForm({ companyId, companyName, positions, onSuccess }: Sal
         positionId = existingPos.id
       } else {
         // Create new position
-        const newPos = await api.positions.create({
+        const newPos = await api.positions.create(token, {
           companyId,
           title: data.jobTitle,
           level: data.level || undefined,
@@ -390,7 +394,7 @@ export function SalaryForm({ companyId, companyName, positions, onSuccess }: Sal
         positionId = newPos.id
       }
 
-      await api.salaries.add(positionId, {
+      await api.salaries.add(token, positionId, {
         amount: data.amount,
         currency: data.currency,
         period: data.period,
@@ -404,8 +408,11 @@ export function SalaryForm({ companyId, companyName, positions, onSuccess }: Sal
         setSubmitted(false)
         setIsExpanded(false)
       }, 3000)
-    } catch {
-      // Silently handle — in production, show toast
+    } catch (err) {
+      const msg = err instanceof Error && err.message === "NO_AUTH"
+        ? "Inicia sesión para reportar tu salario."
+        : "Hubo un problema al guardar tu salario. Intenta de nuevo."
+      sileo.error({ title: "Error", description: msg })
     } finally {
       setSubmitting(false)
     }

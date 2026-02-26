@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Star, ThumbsUp, MoreHorizontal, Flag, ChevronDown } from "lucide-react"
+import { Star, ThumbsUp, MoreHorizontal, Flag, ChevronDown, Share2, Link2, Check } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import type { Review } from "@/lib/api"
+import { api, type Review } from "@/lib/api"
+import { getAuthToken } from "@/lib/auth-helpers"
+import { sileo } from "sileo"
 
 /* ─── Utils ─── */
 
@@ -46,55 +48,73 @@ function renderStars(rating: number, size: "sm" | "md" = "sm") {
   )
 }
 
-/* Generate deterministic avatar initials/color from review data */
-function getAvatarProps(review: Review) {
-  const hash = review.id
-    .split("")
-    .reduce((acc, c) => acc + c.charCodeAt(0), 0)
+/* ─── Single Review Card ─── */
 
-  const initials = ["A", "C", "E", "J", "L", "M", "P", "R", "S", "V"]
-  const colors = [
-    "bg-neutral-200 text-neutral-600",
-    "bg-neutral-300 text-neutral-700",
-    "bg-neutral-100 text-neutral-500",
-    "bg-neutral-400 text-neutral-800",
-    "bg-neutral-150 text-neutral-550",
-  ]
-
-  return {
-    initial: initials[hash % initials.length],
-    colorClass: colors[hash % colors.length],
-  }
-}
-
-/* ─── Single Review Card (YouTube-comment style) ─── */
-
-function ReviewCard({ review }: { review: Review }) {
+function ReviewCard({ review, onVoteChange }: { review: Review; onVoteChange?: () => void }) {
   const [expanded, setExpanded] = useState(false)
-  const [helpful, setHelpful] = useState(false)
+  const [voting, setVoting] = useState(false)
+  const [localVoted, setLocalVoted] = useState(review.hasVoted ?? false)
+  const [localCount, setLocalCount] = useState(review.helpfulCount ?? 0)
   const [showMenu, setShowMenu] = useState(false)
+  const [copied, setCopied] = useState(false)
 
-  const avatar = getAvatarProps(review)
   const text = review.pros || ""
   const isLong = text.length > 300
+
+  const handleVote = async () => {
+    if (voting) return
+    setVoting(true)
+    try {
+      const token = await getAuthToken()
+      const result = await api.reviews.toggleVote(token, review.id)
+      setLocalVoted(result.voted)
+      setLocalCount(result.helpfulCount)
+      onVoteChange?.()
+    } catch (err) {
+      if (err instanceof Error && err.message === "NO_AUTH") {
+        sileo.error({ title: "Inicia sesión", description: "Necesitas una cuenta para votar." })
+      }
+    } finally {
+      setVoting(false)
+    }
+  }
+
+  const handleShare = async () => {
+    const url = window.location.href
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      sileo.success({ title: "Link copiado", description: "Enlace copiado al portapapeles." })
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback
+    }
+  }
+
+  // Avatar: use author's avatar illustration or generate initials
+  const avatarUrl = review.authorAvatarUrl
+  const nickname = review.authorNickname || "Anónimo"
 
   return (
     <div className="flex gap-3 group">
       {/* Avatar */}
-      <div
-        className={cn(
-          "h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-medium",
-          avatar.colorClass
-        )}
-      >
-        {avatar.initial}
-      </div>
+      {avatarUrl ? (
+        <img
+          src={avatarUrl}
+          alt={nickname}
+          className="h-9 w-9 rounded-full shrink-0 bg-muted object-cover"
+        />
+      ) : (
+        <div className="h-9 w-9 rounded-full flex items-center justify-center shrink-0 text-sm font-medium bg-neutral-200 text-neutral-600">
+          {nickname.charAt(0).toUpperCase()}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">
         {/* Meta row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] font-medium">Anónimo</span>
+          <span className="text-[13px] font-medium">{nickname}</span>
           {review.isCurrentEmployee && (
             <Badge
               variant="outline"
@@ -149,16 +169,29 @@ function ReviewCard({ review }: { review: Review }) {
         {/* Actions row */}
         <div className="flex items-center gap-1 mt-2 -ml-2">
           <button
-            onClick={() => setHelpful(!helpful)}
+            onClick={handleVote}
+            disabled={voting}
             className={cn(
               "inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs transition-colors",
-              helpful
+              localVoted
                 ? "text-foreground bg-muted"
                 : "text-muted-foreground hover:bg-muted/50"
             )}
           >
-            <ThumbsUp className={cn("h-3.5 w-3.5", helpful && "fill-foreground")} />
-            <span>Útil</span>
+            <ThumbsUp className={cn("h-3.5 w-3.5", localVoted && "fill-foreground")} />
+            <span>{localCount > 0 ? localCount : "Útil"}</span>
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs text-muted-foreground hover:bg-muted/50 transition-colors"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Share2 className="h-3.5 w-3.5" />
+            )}
+            <span>{copied ? "Copiado" : "Compartir"}</span>
           </button>
 
           <div className="relative">
@@ -171,7 +204,7 @@ function ReviewCard({ review }: { review: Review }) {
             {showMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-                <div className="absolute left-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[140px]">
+                <div className="absolute left-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-35">
                   <button
                     className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted transition-colors"
                     onClick={() => setShowMenu(false)}
@@ -194,11 +227,12 @@ function ReviewCard({ review }: { review: Review }) {
 interface ReviewListProps {
   reviews: Review[]
   loading?: boolean
+  onVoteChange?: () => void
 }
 
 const REVIEWS_PER_PAGE = 10
 
-export function ReviewList({ reviews, loading }: ReviewListProps) {
+export function ReviewList({ reviews, loading, onVoteChange }: ReviewListProps) {
   const [visibleCount, setVisibleCount] = useState(REVIEWS_PER_PAGE)
 
   const visible = reviews.slice(0, visibleCount)
@@ -253,7 +287,7 @@ export function ReviewList({ reviews, loading }: ReviewListProps) {
       {/* Reviews */}
       <div className="space-y-5">
         {visible.map((review) => (
-          <ReviewCard key={review.id} review={review} />
+          <ReviewCard key={review.id} review={review} onVoteChange={onVoteChange} />
         ))}
       </div>
 
