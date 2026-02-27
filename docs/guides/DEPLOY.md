@@ -78,6 +78,20 @@ ssh ubuntu@163.176.250.185
 sudo bash /opt/scripts/deploy-https.sh
 ```
 
+## Tokens de Cloudflare — Mapa completo
+
+Hay **dos tokens** distintos con propósitos distintos. NO mezclar.
+
+| Token | Propósito | Permisos | Dónde se usa |
+|-------|-----------|----------|--------------|
+| **Traefik DNS** | ACME DNS Challenge para certs SSL | Zone:DNS:Edit (musuq.me + empliq.io) | Secret `CLOUDFLARE_API_TOKEN` en repo **musuq-platform** → llega al server como `CF_DNS_API_TOKEN` |
+| **Workers Deploy** | Deploy website a CF Workers | Account:Workers Scripts:Edit | Secret `CF_WORKERS_API_TOKEN` en repo **empliq-website** → wrangler lo lee como `CLOUDFLARE_API_TOKEN` |
+
+> **IMPORTANTE:**
+> - `CF_WORKERS_API_TOKEN` y `CF_WORKERS_ACCOUNT_ID` van en el repo **empliq-website**, NO en musuq-platform.
+> - `CLOUDFLARE_API_TOKEN` en musuq-platform es para Traefik DNS Challenge (Let's Encrypt certs para api.empliq.io, *.musuq.me).
+> - Si se actualiza el token de Traefik en CF Dashboard, el valor NO cambia (solo se expanden permisos de zona).
+
 ## Troubleshooting
 
 Ver [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
