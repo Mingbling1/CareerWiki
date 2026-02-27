@@ -30,6 +30,7 @@ export class ProfileRepositoryImpl implements IProfileRepository {
         ...(data.email !== undefined && { email: data.email }),
         ...(data.name !== undefined && { name: data.name }),
         ...(data.avatarUrl !== undefined && { avatarUrl: data.avatarUrl }),
+        ...((data as any).nickname !== undefined && { nickname: (data as any).nickname }),
       },
     });
     return this.toDomain(profile);

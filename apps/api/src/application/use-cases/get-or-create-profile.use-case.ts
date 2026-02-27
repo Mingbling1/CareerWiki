@@ -53,7 +53,15 @@ export class GetOrCreateProfileUseCase {
   async execute(input: GetOrCreateProfileInput): Promise<Profile> {
     // Check if profile already exists
     const existing = await this.profileRepository.findById(input.id);
-    if (existing) return existing;
+    if (existing) {
+      // Backfill nickname for profiles created before the nickname feature
+      if (!existing.nickname) {
+        return this.profileRepository.upsert(input.id, {
+          nickname: generateNickname(),
+        } as any);
+      }
+      return existing;
+    }
 
     // New profile — assign random avatar and nickname
     return this.profileRepository.upsert(input.id, {
