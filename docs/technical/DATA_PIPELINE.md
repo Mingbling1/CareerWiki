@@ -9,7 +9,7 @@
 | Métrica | Valor |
 |---------|-------|
 | Total registros originales | 13,025,497 |
-| Personas jurídicas | 872,051 |
+| Personas jurídicas (RUC 20xxx) | 872,051 |
 | Activas | 847,656 |
 | Con trabajadores registrados | 315,852 |
 | **Pareto 80%** (5.5% empresas) | 17,318 |
@@ -21,7 +21,15 @@
 | **Tier 1** | ≥1000 trabajadores | 915 |  Alta |
 | **Tier 2** | 500-999 trabajadores | 798 |  Media-Alta |
 | **Tier 3** | 100-499 trabajadores | 4,410 |  Media |
-| **Total Prioridad** | ≥100 trabajadores | **6,123** | - |
+| **Tier 4** | 50-99 trabajadores | ~4,700 |  Baja |
+| **Tier 5** | 0-49 trabajadores | ~861,228 |  Mínima |
+| **Total** | Todas las empresas | **872,051** | - |
+
+### Alcance de Scraping
+
+Se scrapean las **872,051 empresas completas** del Padrón RUC, ordenadas por número de trabajadores descendente (las más grandes primero). El CSV consolidado es `data/all_padron_companies.csv` (116MB).
+
+> **Nota:** Los archivos CSV por tier separado (`tier1_mega.csv`, `tier4_5_companies.csv`, etc.) ya no se usan para el pipeline. Se mantiene un único CSV consolidado.
 
 ### Top 10 Sectores (Empresas Prioridad)
 
@@ -48,11 +56,12 @@
 
 ##  Pipeline de Datos (n8n)
 
-### Arquitectura v6 — DatosPeru Only
+### Arquitectura v6 — DatosPeru Only (872K empresas)
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│                   n8n WORKFLOW v6 (DatosPeru Only)             │
+│               n8n WORKFLOW v6 (DatosPeru Only)                │
+│             CSV: all_padron_companies.csv (872K)              │
 ├───────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐  │
@@ -61,14 +70,49 @@
 │  └──────────┘  └───────────┘  └────────────┘  └──────────┘  │
 │       │              │              │              │          │
 │       ▼              ▼              ▼              ▼          │
-│  tier1_mega.csv  Extraer RUC   GET /enrich/    JSONB blob    │
-│                  + metadata    datosperu?ruc=   → Upsert     │
-│                                                companies_raw │
-│                                                 (empliq_dev) │
+│  all_padron_     Extraer RUC   GET /enrich/    JSONB blob    │
+│  companies.csv   + tier 1-5    datosperu?ruc=   → Upsert     │
+│  (ordenado por                                companies_raw │
+│   NroTrab DESC)                               (empliq_dev)   │
 │                                                               │
-│                              Wait 15s entre items             │
+│                        Wait 15s entre items                   │
 └───────────────────────────────────────────────────────────────┘
 ```
+
+### Workflows n8n
+
+| Workflow | Estado | Descripción |
+|----------|--------|-------------|
+| **DatosPeru Enrichment (v6)** | ACTIVO | Workflow principal. Lee `all_padron_companies.csv`, clasifica tier1-5, enriquece y guarda. |
+| **DatosPeru Enrichment Tier4+5** | DESACTIVADO | Redundante — v6 ya procesa todas las empresas. Mantener desactivado. |
+| **Retry Failed Companies** | ACTIVO | Reintenta cada 2h los `failed`/`failed_retry`. Excluye `not_found_datosperu`. |
+| **Retry Failed Tier4+5** | DESACTIVADO | Redundante — Retry Failed Companies cubre todo `source = 'n8n_datosperu_v6'`. |
+| **Logo Pipeline** | ACTIVO | Descarga logos de DatosPeru y los sube a S3. |
+| **Pipeline Monitor v2** | ACTIVO | Monitoreo de estadísticas del pipeline. |
+| **Pipeline Monitor** | DESACTIVADO | Versión anterior del monitor. |
+| **Proxy Discover** | ACTIVO | Descubre proxies SOCKS5 de fuentes públicas y los guarda en tabla `proxies`. |
+| **Proxy Validate** | ACTIVO | Valida proxies de la tabla `proxies` cada 30min vía `POST /proxies/test`. |
+
+> **Nota sobre proxies:** El scraper tiene su **propio pool interno** de proxies (cargados al iniciar + refresh cada 30min) con blacklisting automático. Los workflows Proxy Discover/Validate mantienen la tabla `proxies` en la BD de forma independiente — son útiles para monitoreo y como fuente alternativa.
+
+### Manejo de Errores (errorType)
+
+El scraper ahora retorna `errorType` en cada respuesta:
+
+| errorType | Significado | scrape_status | ¿Se reintenta? |
+|-----------|-------------|---------------|----------------|
+| `null` | Éxito | `enriched` | No (ya terminó) |
+| `not_found` | Empresa no existe en DatosPeru | `not_found_datosperu` | **No** (permanente) |
+| `proxy_error` | Proxy falló / todos blacklisted | `failed` | Sí |
+| `parse_error` | Página cambió / HTML inesperado | `failed` | Sí |
+| `invalid_ruc` | RUC mal formado | — | No |
+
+### Blacklisting de Proxies (interno del scraper)
+
+- Cada proxy acumula fallos (`proxyFailCounts`)
+- Tras **3 fallos** consecutivos → proxy blacklisted
+- Si **todos** los proxies están blacklisted → se resetea y fuerza refresh
+- Refresh automático del pool cada **30 minutos**
 
 **¿Por qué solo DatosPeru?**
 - DatosPeru extrae 15+ campos estructurados por empresa (nombre, estado, dirección, ejecutivos, trabajadores, etc.)
@@ -191,45 +235,48 @@ Usamos Claude/GPT para:
 
 ```
 /home/jimmy/sueldos-organigrama/data/
-├── padron_ruc_juridicas.parquet    # 872K empresas jurídicas
+├── all_padron_companies.csv        # 872K empresas, CSV principal del pipeline
+├── padron_ruc_juridicas.parquet    # 872K empresas jurídicas (análisis)
 ├── ruc_activas.parquet             # 847K activas
 ├── ruc_con_trabajadores.parquet    # 315K con empleados
 ├── ruc_pareto_80.parquet           # 17K (80% trabajadores)
-├── ruc_prioridad_scraping.parquet  # 6K para scraping
+├── ruc_prioridad_scraping.parquet  # 6K tier1-3 (legacy)
 ├── ruc_prioridad_scraping.csv      
-├── tier1_mega.parquet              # 915 mega empresas
+├── tier1_mega.parquet              # 915 mega empresas (legacy)
 ├── tier1_mega.csv                  
-├── tier2_grandes.parquet           # 798 grandes
+├── tier2_grandes.parquet           # 798 grandes (legacy)
 ├── tier2_grandes.csv               
-├── tier3_medianas.parquet          # 4,410 medianas
+├── tier3_medianas.parquet          # 4,410 medianas (legacy)
 ├── tier3_medianas.csv              
 └── resumen_analisis.json           # Métricas
 ```
+
+> Los archivos legacy (tier1/2/3 CSVs individuales) se mantienen para referencia pero el pipeline usa solo `all_padron_companies.csv`.
 
 ---
 
 ##  Estrategia de Implementación
 
-### Fase 1: Tier 1 (915 empresas)
-- Scraping manual de las top 50
-- Automatización para el resto
-- Validación manual de datos
+### Pipeline Actual (Febrero 2026)
 
-### Fase 2: Tier 2 (798 empresas)
-- Flujo automatizado completo
-- Revisión por muestreo
+El pipeline procesa las **872,051 empresas** del Padrón RUC en un solo flujo:
 
-### Fase 3: Tier 3 (4,410 empresas)
-- Pipeline completamente automatizado
-- Validación por AI
+1. **CSV único** (`all_padron_companies.csv`) ordenado por NroTrab DESC
+2. **Workflow v6** procesa secuencialmente, las empresas más grandes primero
+3. **Retry automático** cada 2h para errores temporales (proxy/parse)
+4. **Not-found permanente** — empresas que no existen en DatosPeru no se reintentan
 
 ### Timeline Estimado
 
-| Fase | Empresas | Tiempo | Método |
+| Fase | Empresas | Tiempo | Estado |
 |------|----------|--------|--------|
-| Fase 1 | 915 | 1-2 semanas | Semi-manual |
-| Fase 2 | 798 | 1 semana | Automatizado |
-| Fase 3 | 4,410 | 2-3 semanas | Full auto |
+| Tier 1 (≥1000) | 915 | ~4h | En progreso |
+| Tier 2 (500-999) | 798 | ~3h | En progreso |
+| Tier 3 (100-499) | 4,410 | ~18h | Pendiente |
+| Tier 4 (50-99) | ~4,700 | ~20h | Pendiente |
+| Tier 5 (0-49) | ~861K | ~meses | Pendiente |
+
+> A 15s por empresa, ~240 empresas/hora. El pipeline corre 24/7.
 
 ---
 
