@@ -1,67 +1,82 @@
 # Guía: Deploy a Producción
 
-> Deploy a Oracle Cloud ARM con Docker y Traefik.
+> Arquitectura híbrida: Website en Cloudflare Workers, Backend en Oracle Cloud ARM.
 
 ## Infraestructura
 
-- **Servidor:** Oracle Cloud ARM (A1.Flex) — 4 cores, 24GB RAM
-- **Reverse Proxy:** Traefik v3 con Let's Encrypt (HTTPS automático)
-- **CI/CD:** GitHub Actions → SSH → docker compose pull + up
+| Componente | Plataforma | CI/CD |
+|------------|-----------|-------|
+| **Website (Next.js)** | Cloudflare Workers | GitHub Actions → `empliq-website` repo |
+| **API (NestJS)** | Oracle Cloud ARM (Docker + Traefik) | GitHub Actions → `musuq-platform` repo |
+| **Scraper** | Oracle Cloud ARM (Docker + Traefik) | GitHub Actions → `musuq-platform` repo |
+| **Supabase (Auth/Kong/Studio)** | Oracle Cloud ARM (Docker + Traefik) | GitHub Actions → `musuq-platform` repo |
 
-## Dominio
+- **Servidor Oracle:** A1.Flex ARM — 4 cores, 24GB RAM (163.176.250.185)
+- **Reverse Proxy:** Traefik v3 con Let's Encrypt (Cloudflare DNS Challenge)
+- **Edge:** Cloudflare Workers (300+ PoPs)
 
-| Subdominio | Servicio |
-|------------|----------|
-| `empliq.com` | Website (Next.js) |
-| `app.empliq.com` | Frontend (React) |
-| `api.empliq.com` | API (NestJS) |
-| `scraper.musuq.me` | Scraper API (standalone) |
+## Dominios
 
-## Deploy Manual
+| Dominio | Servicio | Plataforma |
+|---------|----------|-----------|
+| `empliq.io` | Website (Next.js) | Cloudflare Workers |
+| `www.empliq.io` | Redirect → empliq.io | Cloudflare Workers |
+| `api.empliq.io` | API (NestJS) | Oracle + Traefik |
+| `auth.empliq.io` → `supabase.musuq.me` | Supabase GoTrue | Oracle + Traefik |
+| `scraper.musuq.me` | Scraper API | Oracle + Traefik |
 
-```bash
-# SSH al servidor
-ssh opc@<oracle-ip>
+## Website — Cloudflare Workers
 
-# Pull latest
-cd /opt/empliq
-git pull
+El website se despliega en Cloudflare Workers vía OpenNext.
 
-# Rebuild y restart
-docker compose -f docker-compose.prod.yml up -d --build
+- **Repo:** `github.com/Mingbling1/empliq-website`
+- **Workflow:** `.github/workflows/deploy.yml`
+- **Worker URL:** `empliq-website.jimmy-auris.workers.dev`
+- **Custom domain:** `empliq.io` (configurar en CF Dashboard)
 
-# Verificar
-docker compose ps
-docker logs empliq-api --tail 20
-```
+### Secrets en GitHub (repo empliq-website)
 
-## Deploy con GitHub Actions
+| Secret | Valor |
+|--------|-------|
+| `CF_WORKERS_API_TOKEN` | Token con permisos Workers:Edit |
+| `CF_WORKERS_ACCOUNT_ID` | `70d3ebd86fd199ed070cc93d3296abca` |
 
-El repositorio tiene un workflow CI/CD que:
-1. Build de imágenes Docker (multi-arch ARM64)
-2. Push a container registry
-3. SSH al servidor
-4. `docker compose pull` + `docker compose up -d`
+> **IMPORTANTE:** Nombres distintos a los de musuq-platform para evitar confusión.
 
-### Secrets requeridos en GitHub
-
-```
-ORACLE_SSH_KEY        # Llave SSH privada
-ORACLE_HOST           # IP del servidor
-ORACLE_USER           # opc
-SCRAPER_API_KEY       # API key para el scraper
-```
-
-## Scraper (Deploy Standalone)
-
-El scraper tiene su propio CI/CD:
+### Deploy manual
 
 ```bash
-cd apps/empliq-scraper-api
-./deploy.sh
+cd apps/website
+npm run deploy
+# Requiere CLOUDFLARE_API_TOKEN en env (wrangler lo lee así)
 ```
 
-Incluye labels de Traefik para `scraper.musuq.me`.
+Ver [CLOUDFLARE_DEPLOY.md](../technical/CLOUDFLARE_DEPLOY.md) para detalle completo.
+
+## Backend — Oracle Cloud ARM
+
+El backend, scraper, y stack Supabase se despliegan en Oracle vía Docker.
+
+- **Repo:** `github.com/Mingbling1/musuq-platform`
+- **Workflow:** `.github/workflows/deploy-https.yml`
+
+### Secrets en GitHub (repo musuq-platform)
+
+```
+SSH_PRIVATE_KEY              # Llave SSH al servidor Oracle
+INSTANCE_IP                  # 163.176.250.185
+CLOUDFLARE_API_TOKEN         # Para Traefik DNS Challenge
+SCRAPER_API_KEY              # API key para el scraper
+EMPLIQ_GOOGLE_CLIENT_ID      # OAuth
+EMPLIQ_GOOGLE_CLIENT_SECRET   # OAuth
+```
+
+### Deploy manual
+
+```bash
+ssh ubuntu@163.176.250.185
+sudo bash /opt/scripts/deploy-https.sh
+```
 
 ## Troubleshooting
 
