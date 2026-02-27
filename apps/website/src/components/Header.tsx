@@ -12,34 +12,21 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu"
-import { Building2, Users, DollarSign, MessageSquare } from 'lucide-react'
+import { Building2, DollarSign } from 'lucide-react'
 
 const recursos = [
   {
     title: "Salarios",
     href: "/salarios",
-    description: "Descubre rangos salariales por puesto y empresa.",
+    description: "No te dejes engañar. Conoce cuánto ganan de verdad.",
     icon: DollarSign,
   },
   {
     title: "Empresas",
     href: "/empresas",
-    description: "Explora perfiles de empresas y sus organigramas.",
+    description: "Investiga sueldos, beneficios y reseñas reales.",
     icon: Building2,
-  },
-  // {
-  //   title: "Comunidad",
-  //   href: "/comunidad",
-  //   description: "Conecta con otros profesionales y comparte experiencias.",
-  //   icon: Users,
-  // },
-  {
-    title: "Reseñas",
-    href: "/resenas",
-    description: "Lee y comparte reseñas sobre empresas.",
-    icon: MessageSquare,
   },
 ]
 
@@ -93,20 +80,6 @@ export function Header() {
                       ))}
                     </ul>
                   </NavigationMenuContent>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/puestos">
-                      Puestos
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-                    <Link href="/empresas">
-                      Empresas
-                    </Link>
-                  </NavigationMenuLink>
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>

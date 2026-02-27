@@ -22,6 +22,7 @@ export class ProfileRepositoryImpl implements IProfileRepository {
         id,
         email: data.email ?? null,
         name: data.name ?? null,
+        nickname: (data as any).nickname ?? null,
         avatarUrl: data.avatarUrl ?? null,
         role: data.role ?? 'user',
       },
@@ -42,11 +43,20 @@ export class ProfileRepositoryImpl implements IProfileRepository {
     return this.toDomain(profile);
   }
 
+  async updateNickname(id: string, nickname: string): Promise<Profile> {
+    const profile = await this.prisma.profile.update({
+      where: { id },
+      data: { nickname },
+    });
+    return this.toDomain(profile);
+  }
+
   private toDomain(data: any): Profile {
     return new Profile(
       data.id,
       data.email,
       data.name,
+      data.nickname,
       data.avatarUrl,
       data.role,
       data.createdAt,

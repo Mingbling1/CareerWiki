@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Search, LogOut, User, Bell, Settings, ChevronDown, Building2, DollarSign } from "lucide-react"
+import { Search, LogOut, User, Bell, Settings, Building2, DollarSign } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { EmpliqLogo } from "@/components/EmpliqLogo"
 import { Button } from "@/components/ui/button"
@@ -18,21 +18,6 @@ import { CurrencyLanguageSelector } from "@/components/CurrencyLanguageSelector"
 import { api } from "@/lib/api"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
-const recursos = [
-  {
-    name: "Conoce las Empresas",
-    description: "Investiga sueldos, beneficios y resenas reales",
-    href: "/empresas",
-    icon: Building2,
-  },
-  {
-    name: "Compara tu Sueldo",
-    description: "Compara tu sueldo con miles de profesionales",
-    href: "/salarios",
-    icon: DollarSign,
-  },
-]
-
 export function AppHeader({ initialAvatarUrl }: { initialAvatarUrl?: string | null }) {
   const pathname = usePathname()
   const router = useRouter()
@@ -40,7 +25,6 @@ export function AppHeader({ initialAvatarUrl }: { initialAvatarUrl?: string | nu
   const [customAvatar, setCustomAvatar] = useState<string | null>(initialAvatarUrl ?? null)
   const [prevInitialAvatar, setPrevInitialAvatar] = useState(initialAvatarUrl)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [recursosOpen, setRecursosOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -244,51 +228,34 @@ export function AppHeader({ initialAvatarUrl }: { initialAvatarUrl?: string | nu
         )}
       </div>
 
-      {/* Secondary Navigation Bar - Recursos dropdown */}
+      {/* Secondary Navigation Bar */}
       <div className="border-b border-border/40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <nav className="flex gap-0">
-            <div className="relative">
-              <button
-                onClick={() => setRecursosOpen(!recursosOpen)}
-                className={cn(
-                  "relative flex items-center gap-1 px-4 py-2.5 text-sm font-medium transition-colors",
-                  recursosOpen || pathname.startsWith("/salarios") || pathname.startsWith("/empresas")
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Recursos
-                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", recursosOpen && "rotate-180")} />
-              </button>
-
-              {recursosOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setRecursosOpen(false)} />
-                  <div className="absolute left-0 top-full mt-0.5 w-72 bg-popover rounded-lg border border-border/60 shadow-lg z-50 py-2">
-                    {recursos.map((item) => {
-                      const Icon = item.icon
-                      return (
-                        <Link
-                          key={item.name}
-                          href={item.href}
-                          onClick={() => setRecursosOpen(false)}
-                          className="flex items-start gap-3 px-4 py-3 hover:bg-accent transition-colors"
-                        >
-                          <div className="mt-0.5 p-1.5 rounded-md bg-muted">
-                            <Icon className="h-4 w-4 text-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{item.name}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{item.description}</p>
-                          </div>
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </>
+            <Link
+              href="/salarios"
+              className={cn(
+                "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors",
+                pathname.startsWith("/salarios")
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               )}
-            </div>
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+              Salarios
+            </Link>
+            <Link
+              href="/empresas"
+              className={cn(
+                "relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors",
+                pathname.startsWith("/empresas")
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              Empresas
+            </Link>
           </nav>
         </div>
       </div>

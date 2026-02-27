@@ -20,7 +20,7 @@ export function CompanyResenas() {
       )}
 
       {/* Reviews List */}
-      <ReviewList reviews={reviews} loading={loading} onVoteChange={refetch} />
+      <ReviewList reviews={reviews} loading={loading} />
     </div>
   )
 }

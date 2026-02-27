@@ -21,7 +21,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT ruc, razon_social, data->>'website' AS website, data->>'name' AS nombre_comercial FROM companies_raw WHERE logo_bucket_url IS NULL AND (data->>'scrape_status' = 'enriched' OR data->>'scrape_status' IS NULL) ORDER BY (data->>'nro_trabajadores')::int DESC NULLS LAST LIMIT 100;",
+        "query": "SELECT ruc, razon_social, data->>'website' AS website, data->>'name' AS nombre_comercial, COALESCE((data->>'logo_attempts')::int, 0) AS logo_attempts FROM companies_raw WHERE logo_bucket_url IS NULL AND (data->>'scrape_status' = 'enriched' OR data->>'scrape_status' IS NULL) AND COALESCE((data->>'logo_attempts')::int, 0) < 3 AND (data->>'logo_last_attempt_at' IS NULL OR (data->>'logo_last_attempt_at')::timestamptz < NOW() - INTERVAL '24 hours') ORDER BY COALESCE((data->>'logo_attempts')::int, 0) ASC, (data->>'nro_trabajadores')::int DESC NULLS LAST LIMIT 50;",
         "options": {}
       },
       "id": "logo-get-pending-001",
@@ -122,7 +122,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "=UPDATE companies_raw SET logo_bucket_url = '{{ $json.logo_bucket_url }}', updated_at = NOW() WHERE ruc = '{{ $json.ruc }}';",
+        "query": "=UPDATE companies_raw SET logo_bucket_url = '{{ $json.logo_bucket_url }}', data = data - 'logo_attempts' - 'logo_last_attempt_at' - 'logo_error', updated_at = NOW() WHERE ruc = '{{ $json.ruc }}';",
         "options": {}
       },
       "id": "logo-update-db-001",
@@ -156,8 +156,26 @@
       "name": "Wait 1s (Failed)",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [1120, 224],
+      "position": [1344, 224],
       "webhookId": "logo-wait-fail"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "=UPDATE companies_raw SET data = jsonb_set( jsonb_set( jsonb_set( data, '{logo_attempts}', to_jsonb(COALESCE((data->>'logo_attempts')::int, 0) + 1) ), '{logo_last_attempt_at}', to_jsonb(NOW()::text) ), '{logo_error}', to_jsonb('{{ $json.error }}'::text) ), updated_at = NOW() WHERE ruc = '{{ $json.ruc }}';",
+        "options": {}
+      },
+      "id": "logo-track-fail-001",
+      "name": "Track Failed Attempt",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [1120, 224],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -240,7 +258,7 @@
         ],
         [
           {
-            "node": "Wait 1s (Failed)",
+            "node": "Track Failed Attempt",
             "type": "main",
             "index": 0
           }
@@ -274,6 +292,17 @@
         [
           {
             "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Track Failed Attempt": {
+      "main": [
+        [
+          {
+            "node": "Wait 1s (Failed)",
             "type": "main",
             "index": 0
           }
