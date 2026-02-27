@@ -122,10 +122,11 @@ npm install --save-dev @opennextjs/cloudflare wrangler
     "binding": "ASSETS"
   },
 
-  // Variables de entorno — production
+  // Variables de entorno — runtime (server-side en el Worker)
   "vars": {
     "NEXT_PUBLIC_API_URL": "https://api.empliq.io",
     "NEXT_PUBLIC_SUPABASE_URL": "https://auth.empliq.io",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJ...",
     "ENVIRONMENT": "production"
   }
 
@@ -343,6 +344,10 @@ jobs:
 
       - name: Build with OpenNext
         run: npx opennextjs-cloudflare build
+        env:
+          NEXT_PUBLIC_API_URL: https://api.empliq.io
+          NEXT_PUBLIC_SUPABASE_URL: https://auth.empliq.io
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJ...(anon key completa)
 
       - name: Deploy to Cloudflare
         run: npx wrangler deploy
@@ -350,6 +355,12 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CF_WORKERS_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_WORKERS_ACCOUNT_ID }}
 ```
+
+> **CRITICO — Build-time vs Runtime:**
+> Next.js reemplaza `process.env.NEXT_PUBLIC_*` con valores literales durante `next build` (string replacement).
+> Si no estan disponibles en CI, se inyectan como `undefined` en el bundle → crash en produccion.
+> Por eso las `NEXT_PUBLIC_*` van como `env:` en el step de Build, NO solo en `wrangler.jsonc`.
+> Las vars en `wrangler.jsonc` sirven para server-side runtime (middleware, server components).
 
 > **Importante:** El repo empliq-website es standalone (tiene su propio `package.json` y `package-lock.json`).
 > `npm ci` instala TODAS las dependencias localmente, incluyendo `next`, `wrangler` y `@opennextjs/cloudflare`.
