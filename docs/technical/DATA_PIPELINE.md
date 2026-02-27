@@ -60,8 +60,8 @@ Se scrapean las **872,051 empresas completas** del Padrón RUC, ordenadas por n�
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│               n8n WORKFLOW v6 (DatosPeru Only)                │
-│             CSV: all_padron_companies.csv (872K)              │
+│           n8n WORKFLOW v6 (DatosPeru, Batch XX/10)            │
+│        CSV: all_padron_batch_XX.csv (~87K empresas)           │
 ├───────────────────────────────────────────────────────────────┤
 │                                                               │
 │  ┌──────────┐  ┌───────────┐  ┌────────────┐  ┌──────────┐  │
@@ -70,28 +70,50 @@ Se scrapean las **872,051 empresas completas** del Padrón RUC, ordenadas por n�
 │  └──────────┘  └───────────┘  └────────────┘  └──────────┘  │
 │       │              │              │              │          │
 │       ▼              ▼              ▼              ▼          │
-│  all_padron_     Extraer RUC   GET /enrich/    JSONB blob    │
-│  companies.csv   + tier 1-5    datosperu?ruc=   → Upsert     │
-│  (ordenado por                                companies_raw │
-│   NroTrab DESC)                               (empliq_dev)   │
+│  batch_XX.csv    Extraer RUC   GET /enrich/    JSONB blob    │
+│  (~11MB c/u)     + tier 1-5    datosperu?ruc=   → Upsert     │
+│  (87K filas)                                  companies_raw  │
+│                                                (empliq_dev)  │
 │                                                               │
 │                        Wait 15s entre items                   │
 └───────────────────────────────────────────────────────────────┘
 ```
 
+> **¿Por qué 10 batches?** El CSV completo (872K filas, 116MB) causaba "Maximum call stack size exceeded" en n8n por consumo excesivo de RAM. Con ~87K filas (~11MB) por batch, cada workflow cabe en memoria sin problemas.
+
+### Archivos de Batches
+
+```
+/opt/n8n-data/files/           (servidor, mapeado a /files/ en n8n)
+├── all_padron_batch_01.csv    # 87,206 filas — Tier 1-3 + inicio Tier 4 (NroTrab DESC)
+├── all_padron_batch_02.csv    # 87,206 filas
+├── ...
+└── all_padron_batch_10.csv    # 87,197 filas — final Tier 5
+```
+
+Todos los batches están ordenados por `NroTrab` descendente (las empresas más grandes primero, partiendo desde Batch 01).
+
 ### Workflows n8n
 
 | Workflow | Estado | Descripción |
 |----------|--------|-------------|
-| **DatosPeru Enrichment (v6)** | ACTIVO | Workflow principal. Lee `all_padron_companies.csv`, clasifica tier1-5, enriquece y guarda. |
-| **DatosPeru Enrichment Tier4+5** | DESACTIVADO | Redundante — v6 ya procesa todas las empresas. Mantener desactivado. |
+| **Enrichment Batch 01** | ACTIVAR | Batch 01: ~87K empresas (las más grandes). Activar primero. |
+| **Enrichment Batch 02-10** | DESACTIVAR | Activar secuencialmente cuando el batch anterior termine. |
+| **DatosPeru Enrichment (v6)** | **DESACTIVAR** | Reemplazado por los 10 batches. Causaba crash de memoria. |
+| **DatosPeru Enrichment Tier4+5** | DESACTIVAR | Redundante — batches cubren todo. |
 | **Retry Failed Companies** | ACTIVO | Reintenta cada 2h los `failed`/`failed_retry`. Excluye `not_found_datosperu`. |
-| **Retry Failed Tier4+5** | DESACTIVADO | Redundante — Retry Failed Companies cubre todo `source = 'n8n_datosperu_v6'`. |
+| **Retry Failed Tier4+5** | DESACTIVAR | Redundante — Retry Failed Companies cubre todo `source = 'n8n_datosperu_v6'`. |
 | **Logo Pipeline** | ACTIVO | Descarga logos de DatosPeru y los sube a S3. |
 | **Pipeline Monitor v2** | ACTIVO | Monitoreo de estadísticas del pipeline. |
-| **Pipeline Monitor** | DESACTIVADO | Versión anterior del monitor. |
+| **Pipeline Monitor** | DESACTIVAR | Versión anterior del monitor. |
 | **Proxy Discover** | ACTIVO | Descubre proxies SOCKS5 de fuentes públicas y los guarda en tabla `proxies`. |
 | **Proxy Validate** | ACTIVO | Valida proxies de la tabla `proxies` cada 30min vía `POST /proxies/test`. |
+
+> **Cómo operar los batches:**
+> 1. Importar y activar solo **Batch 01**
+> 2. Cuando Batch 01 no tenga más pendientes (el workflow termina inmediato), **desactivar Batch 01** y **activar Batch 02**
+> 3. Repetir secuencialmente hasta Batch 10
+> 4. La deduplicación funciona automáticamente: cada batch consulta `companies_raw` para excluir RUCs ya procesados
 
 > **Nota sobre proxies:** El scraper tiene su **propio pool interno** de proxies (cargados al iniciar + refresh cada 30min) con blacklisting automático. Los workflows Proxy Discover/Validate mantienen la tabla `proxies` en la BD de forma independiente — son útiles para monitoreo y como fuente alternativa.
 
@@ -235,7 +257,12 @@ Usamos Claude/GPT para:
 
 ```
 /home/jimmy/sueldos-organigrama/data/
-├── all_padron_companies.csv        # 872K empresas, CSV principal del pipeline
+├── all_padron_companies.csv        # 872K empresas, CSV completo (NO usar directo en n8n)
+├── batches/                        # Subdivisión en 10 para n8n
+│   ├── all_padron_batch_01.csv     # ~87K filas (Tier 1-3 + inicio Tier 4)
+│   ├── all_padron_batch_02.csv     # ~87K filas
+│   ├── ...
+│   └── all_padron_batch_10.csv     # ~87K filas (final Tier 5)
 ├── padron_ruc_juridicas.parquet    # 872K empresas jurídicas (análisis)
 ├── ruc_activas.parquet             # 847K activas
 ├── ruc_con_trabajadores.parquet    # 315K con empleados
@@ -251,7 +278,7 @@ Usamos Claude/GPT para:
 └── resumen_analisis.json           # Métricas
 ```
 
-> Los archivos legacy (tier1/2/3 CSVs individuales) se mantienen para referencia pero el pipeline usa solo `all_padron_companies.csv`.
+> El CSV completo (`all_padron_companies.csv`) y los batches están en `.gitignore` (>116MB). Los batches se suben al servidor vía SCP a `/opt/n8n-data/files/`.
 
 ---
 

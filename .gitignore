@@ -40,3 +40,4 @@ Thumbs.db
 # Docker
 docker/.env
 data/all_padron_companies.csv
+data/batches/

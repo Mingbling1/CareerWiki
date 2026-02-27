@@ -1,0 +1,434 @@
+{
+  "name": "Empliq - DatosPeru Enrichment Batch 09",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "d0eca4b5-c8e2-4c18-af97-b1e9032047e5",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "filePath": "/files/all_padron_batch_09.csv"
+      },
+      "id": "b3715497-ca89-4031-96c6-f72c8654165e",
+      "name": "Read CSV File",
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "ded56298-87f2-4f16-b7de-93ad8e84a10b",
+      "name": "Parse CSV",
+      "type": "n8n-nodes-base.spreadsheetFile",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT ruc FROM companies_raw WHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_v6', 'n8n_datosperu_t45');",
+        "options": {}
+      },
+      "id": "49312bc9-083a-4e8e-b156-096944e47149",
+      "name": "Get Existing RUCs",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        0,
+        224
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "580882c0-4aba-43f0-86e8-584af22d2478",
+      "name": "Wait for Both",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        224,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all CSV items from Parse CSV\nconst csvItems = $('Parse CSV').all();\n\n// Get already-processed RUCs from DB\nconst existingItems = $('Get Existing RUCs').all();\nconst existingRucs = new Set(existingItems.map(i => String(i.json.ruc).trim()));\n\n// Filter: only keep companies NOT yet in DB\nconst pending = csvItems.filter(item => {\n  const ruc = String(item.json.RUC || '').trim();\n  return ruc.length > 0 && !existingRucs.has(ruc);\n});\n\nconst total = csvItems.length;\nconst already = existingRucs.size;\nconst remaining = pending.length;\n\nconsole.log(`📊 Total CSV: ${total} | Ya procesados: ${already} | Pendientes: ${remaining}`);\n\nif (remaining === 0) {\n  console.log('✅ All companies already processed!');\n  return [];  // Empty array = workflow stops naturally, no items to loop\n}\n\nconsole.log(`🚀 Starting with ${remaining} pending companies...`);\nreturn pending.map(item => ({ json: item.json }));"
+      },
+      "id": "4d4d3471-5302-4ff0-9aa1-0acb174639e1",
+      "name": "Filter Pending",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "679680f2-3199-4c3e-88ef-85092fded02e",
+      "name": "Loop Items",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\nconst ruc = String(item.json.RUC || '').trim();\nconst razonSocial = String(item.json.RazonSocial || '').trim();\nconst tipo = String(item.json.Tipo || '').trim();\nconst actividad = String(item.json.Actividad_CIIU3_Principal || '').trim();\nconst departamento = String(item.json.Departamento || '').trim();\nconst nroTrab = parseInt(item.json.NroTrab_num || item.json.NroTrab || '0') || 0;\n\nlet tier = 'tier5';\nif (nroTrab >= 1000) tier = 'tier1';\nelse if (nroTrab >= 500) tier = 'tier2';\nelse if (nroTrab >= 100) tier = 'tier3';\nelse if (nroTrab >= 50) tier = 'tier4';\n\nreturn {\n  json: {\n    ruc,\n    razonSocial,\n    tipo,\n    actividad,\n    departamento,\n    provincia: item.json.Provincia || null,\n    distrito: item.json.Distrito || null,\n    nroTrabajadores: nroTrab,\n    tier\n  }\n};"
+      },
+      "id": "c5718ec9-d73d-4efe-bf86-9c61bf0fe3f0",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://scraper.musuq.me/enrich/datosperu?ruc={{ $json.ruc }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "cbbee76f8bed4061fe85a0a3c5d459d9e85dade42a0b4c11575032a0d52680ba"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "e8b034ff-0ea6-498d-ad20-598a7c5223b3",
+      "name": "Enrich DatosPeru",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        112
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const prep = $('Prepare Data').first().json;\nconst dp = $input.first().json;\nconst dpOk = dp.success === true;\n\n// Capture real error details when enrichment fails\nlet errorMsg = null;\nlet errorType = dp.errorType || null; // 'not_found' | 'proxy_error' | 'parse_error'\nif (!dpOk) {\n  const parts = [];\n  if (errorType) parts.push(`[${errorType}]`);\n  if (dp.errorMessage) parts.push(dp.errorMessage);\n  else if (dp.code) parts.push(`[${dp.code}]`);\n  if (dp.error) parts.push(dp.error);\n  else if (dp.message) parts.push(dp.message);\n  else if (dp.statusMessage) parts.push(dp.statusMessage);\n  if (dp.statusCode) parts.push(`HTTP ${dp.statusCode}`);\n  errorMsg = parts.length > 0 ? parts.join(' ') : 'Unknown error';\n  console.log(`❌ ${prep.ruc} | ${prep.razonSocial} | ${errorMsg}`);\n}\n\n// Determine scrape_status:\n// - 'enriched' when success\n// - 'not_found_datosperu' when company doesn't exist on DatosPeru (permanent, no retry)\n// - 'failed' for proxy/parse/temporary errors (will be retried)\nlet scrapeStatus = 'failed';\nif (dpOk) {\n  scrapeStatus = 'enriched';\n} else if (errorType === 'not_found') {\n  scrapeStatus = 'not_found_datosperu';\n}\n\nconst data = {\n  name: dpOk ? (dp.nombre || prep.razonSocial) : prep.razonSocial,\n  estado: dpOk ? (dp.estado || 'ACTIVO') : 'ACTIVO',\n  condicion: 'HABIDO',\n  tipo_empresa: dpOk ? (dp.tipo || prep.tipo) : prep.tipo,\n  actividad_ciiu: dpOk ? (dp.ciiu || prep.actividad) : prep.actividad,\n  sector_economico: dpOk ? (dp.sectorEconomico || null) : null,\n  comercio_exterior: dpOk ? (dp.marcaComercioExterior || null) : null,\n  direccion: dpOk ? (dp.direccion || null) : null,\n  referencia: dpOk ? (dp.referencia || null) : null,\n  departamento: dpOk ? (dp.departamento || prep.departamento) : prep.departamento,\n  provincia: dpOk ? (dp.provincia || prep.provincia) : prep.provincia,\n  distrito: dpOk ? (dp.distrito || prep.distrito) : prep.distrito,\n  telefonos: dpOk && dp.telefonos ? dp.telefonos : [],\n  website: dpOk ? (dp.web || null) : null,\n  description: dpOk ? (dp.descripcion || null) : null,\n  logo_url: dpOk ? (dp.logoUrl || null) : null,\n  fecha_inicio: dpOk ? (dp.fechaInicio || null) : null,\n  fecha_inscripcion: dpOk ? (dp.fechaInscripcion || null) : null,\n  proveedor_estado: dpOk ? dp.proveedorEstado : false,\n  ejecutivos: dpOk ? (dp.ejecutivos || []) : [],\n  establecimientos_anexos: dpOk ? (dp.establecimientosAnexos || []) : [],\n  historial_trabajadores: dpOk ? (dp.historialTrabajadores || []) : [],\n  historial_condiciones: dpOk ? (dp.historialCondiciones || []) : [],\n  historial_direcciones: dpOk ? (dp.historialDirecciones || []) : [],\n  nro_trabajadores: prep.nroTrabajadores,\n  tier: prep.tier,\n  source_url: dpOk ? (dp.sourceUrl || null) : null,\n  fields_extracted: dpOk ? dp.fieldsExtracted : 0,\n  scrape_duration_ms: dpOk ? dp.durationMs : 0,\n  scrape_status: scrapeStatus,\n  scrape_error: errorMsg,\n  error_type: errorType,\n  failed_at: dpOk ? null : new Date().toISOString(),\n  scraped_at: new Date().toISOString()\n};\n\nreturn { json: {\n  ruc: prep.ruc,\n  razon_social: data.name,\n  data: data,\n  source: 'n8n_datosperu_v6',\n  updated_at: new Date().toISOString()\n}};"
+      },
+      "id": "bda17f8f-a77c-4c6b-a12a-6b5835676e40",
+      "name": "Build Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "name",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "name",
+          "value": "companies_raw"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "ruc"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ruc",
+              "displayName": "ruc",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "razon_social",
+              "displayName": "razon_social",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "data",
+              "displayName": "data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "02df1619-2e1b-4e44-a1eb-dc72fd09118d",
+      "name": "Upsert to DB",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1552,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "at5gbOsupi3z6eIA",
+          "name": "Empliq Dev DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15
+      },
+      "id": "dbf4353b-49d9-4fa3-803e-ccab800afb9c",
+      "name": "Wait 15s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1760,
+        112
+      ],
+      "webhookId": "wait-scraper"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [
+          {
+            "node": "Read CSV File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read CSV File": {
+      "main": [
+        [
+          {
+            "node": "Parse CSV",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Existing RUCs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse CSV": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing RUCs": {
+      "main": [
+        [
+          {
+            "node": "Wait for Both",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait for Both": {
+      "main": [
+        [
+          {
+            "node": "Filter Pending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Pending": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "Enrich DatosPeru",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich DatosPeru": {
+      "main": [
+        [
+          {
+            "node": "Build Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Record": {
+      "main": [
+        [
+          {
+            "node": "Upsert to DB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert to DB": {
+      "main": [
+        [
+          {
+            "node": "Wait 15s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 15s": {
+      "main": [
+        [
+          {
+            "node": "Loop Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "enrichment-batch-09-v1",
+  "meta": {
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "tags": []
+}
