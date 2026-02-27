@@ -45,7 +45,7 @@
       "typeVersion": 2.5,
       "position": [
         -200,
-        224
+        200
       ],
       "credentials": {
         "postgres": {
@@ -66,7 +66,7 @@
       "typeVersion": 2.5,
       "position": [
         -200,
-        448
+        400
       ],
       "credentials": {
         "postgres": {
@@ -87,7 +87,7 @@
       "typeVersion": 2.5,
       "position": [
         -200,
-        672
+        600
       ],
       "credentials": {
         "postgres": {
@@ -100,16 +100,16 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT\n  data->>'batch_number' as batch,\n  COUNT(*) as total,\n  COUNT(*) FILTER (WHERE data->>'scrape_status' = 'enriched') as enriched,\n  COUNT(*) FILTER (WHERE data->>'scrape_status' IN ('failed','failed_retry')) as failing,\n  COUNT(*) FILTER (WHERE data->>'scrape_status' = 'not_found_datosperu') as not_found\nFROM companies_raw\nWHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_t45')\n  AND data->>'batch_number' IS NOT NULL\nGROUP BY data->>'batch_number'\nORDER BY data->>'batch_number';",
+        "query": "SELECT\n  COUNT(*) FILTER (WHERE logo_bucket_url IS NOT NULL) as logos_ok,\n  COUNT(*) FILTER (WHERE logo_bucket_url IS NULL AND data->>'scrape_status' = 'enriched' AND COALESCE((data->>'logo_attempts')::int, 0) >= 3) as logos_failed_max,\n  COUNT(*) FILTER (WHERE logo_bucket_url IS NULL AND data->>'scrape_status' = 'enriched' AND COALESCE((data->>'logo_attempts')::int, 0) BETWEEN 1 AND 2) as logos_retrying,\n  COUNT(*) FILTER (WHERE logo_bucket_url IS NULL AND data->>'scrape_status' = 'enriched' AND COALESCE((data->>'logo_attempts')::int, 0) = 0) as logos_pending,\n  COUNT(*) FILTER (WHERE data->>'scrape_status' = 'enriched') as total_enriched\nFROM companies_raw\nWHERE source IN ('n8n_datosperu_v6', 'n8n_datosperu_t45');",
         "options": {}
       },
-      "id": "mon2-06-batches",
-      "name": "Per-Batch Stats",
+      "id": "mon2-06-logos",
+      "name": "Logo Stats",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
         -200,
-        896
+        800
       ],
       "credentials": {
         "postgres": {
@@ -134,7 +134,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const s = $('Query Stats').first().json;\nconst recent = $('Last 10 Processed').all().map(i => i.json);\nconst failures = $('Failed Companies').all().map(i => i.json);\n\n// Proxy stats\nlet proxyLines = [];\ntry {\n  const px = $('Proxy Pool Stats').all();\n  if (px.length > 0) {\n    proxyLines = px.map(p => `${p.json.status}: ${p.json.cnt} proxies (avg ${p.json.avg_ms || '?'}ms)`);\n  }\n} catch(e) { proxyLines = ['Tabla proxies no disponible']; }\n\n// Per-batch stats\nlet batchLines = [];\ntry {\n  const batches = $('Per-Batch Stats').all();\n  if (batches.length > 0) {\n    batchLines = batches.map(b => {\n      const j = b.json;\n      const pct = j.total > 0 ? ((j.enriched / j.total) * 100).toFixed(1) : '0';\n      return `Batch ${j.batch}: ${j.enriched}/${j.total} enriched (${pct}%) | ${j.failing} failed | ${j.not_found} not_found`;\n    });\n  }\n} catch(e) { batchLines = ['Sin datos de batch (batch_number no asignado)']; }\n\nconst total = parseInt(s.total) || 0;\nconst enriched = parseInt(s.enriched) || 0;\nconst failed = parseInt(s.failed) || 0;\nconst failedRetry = parseInt(s.failed_retry) || 0;\nconst notFound = parseInt(s.not_found) || 0;\nconst fixedByRetry = parseInt(s.fixed_by_retry) || 0;\nconst TARGET = 872051;\n\nconst t1 = parseInt(s.tier1) || 0;\nconst t2 = parseInt(s.tier2) || 0;\nconst t3 = parseInt(s.tier3) || 0;\nconst t4 = parseInt(s.tier4) || 0;\nconst t5 = parseInt(s.tier5) || 0;\n\nconst errProxy = parseInt(s.err_proxy) || 0;\nconst errParse = parseInt(s.err_parse) || 0;\nconst errNotFound = parseInt(s.err_not_found) || 0;\n\nconst avgSec = s.avg_sec || 'N/A';\nconst remaining = TARGET - total;\nconst processingRate = parseFloat(avgSec || 5) + 15; // avg scrape + 15s wait\nconst etaHours = remaining > 0 ? Math.round(remaining * processingRate / 3600) : 0;\nconst etaDays = remaining > 0 ? (etaHours / 24).toFixed(1) : '0';\n\nconst processed = total - notFound; // excludes not_found for success rate\nconst successRate = processed > 0 ? ((enriched / processed) * 100).toFixed(1) : '0';\nconst totalErrors = failed + failedRetry;\n\nreturn { json: {\n  report: [\n    '══════════════════════════════════════════════════',\n    '  EMPLIQ PIPELINE MONITOR v2.1',\n    '  Target: 872,051 empresas (Padrón RUC completo)',\n    '  Arquitectura: 10 batches × ~87K | Retry cada 2h',\n    '══════════════════════════════════════════════════',\n    '',\n    `🎯 PROGRESO GLOBAL: ${total.toLocaleString()} / ${TARGET.toLocaleString()} (${((total/TARGET)*100).toFixed(2)}%)`,\n    `   Pendientes: ${remaining.toLocaleString()} | ETA: ~${etaHours}h (~${etaDays} días)`,\n    '',\n    '── RESULTADOS ──────────────────────────────────',\n    `   ✅ Enriched:        ${enriched.toLocaleString()}`,\n    `   🚫 Not Found:       ${notFound.toLocaleString()} (permanente, no se reintenta)`,\n    `   ❌ Failed:          ${failed.toLocaleString()} (primer intento)`,\n    `   ❌ Failed Retry:    ${failedRetry.toLocaleString()} (reintento fallido)`,\n    `   🔄 Fixed by Retry:  ${fixedByRetry.toLocaleString()} (recuperados)`,\n    `   📊 Success Rate:    ${successRate}% (excluyendo not_found)`,\n    '',\n    '── POR TIER ────────────────────────────────────',\n    `   Tier 1 (≥1000 emp):  ${t1.toLocaleString()}`,\n    `   Tier 2 (500-999):    ${t2.toLocaleString()}`,\n    `   Tier 3 (100-499):    ${t3.toLocaleString()}`,\n    `   Tier 4 (50-99):      ${t4.toLocaleString()}`,\n    `   Tier 5 (0-49):       ${t5.toLocaleString()}`,\n    '',\n    '── ERRORES (tipo) ──────────────────────────────',\n    `   🔌 Proxy Error:  ${errProxy} (proxy caído/blacklisted)`,\n    `   📄 Parse Error:  ${errParse} (HTML inesperado)`,\n    `   🔍 Not Found:    ${errNotFound} (empresa no existe en DatosPeru)`,\n    '',\n    '── PROXIES (tabla proxies) ────────────────────',\n    ...proxyLines.map(l => `   ${l}`),\n    '',\n    '── POR BATCH (/files/all_padron_batch_XX.csv) ─',\n    ...batchLines.map(l => `   ${l}`),\n    '',\n    '── TIMING ──────────────────────────────────────',\n    `   Avg scrape:   ${avgSec}s`,\n    `   Avg fields:   ${s.avg_fields || 'N/A'}`,\n    `   Wait/item:    15s`,\n    `   Rate:         ~${Math.round(3600 / processingRate)}/hora`,\n    `   Started:      ${s.started_at || 'N/A'}`,\n    `   Last update:  ${s.last_updated || 'N/A'}`,\n    '',\n    '── WORKFLOWS ACTIVOS ──────────────────────────',\n    '   📦 Enrichment Batch XX/10  (secuencial, 1 activo a la vez)',\n    '   🔄 Retry Failed Companies  (cada 2h, failed + failed_retry)',\n    '   🔍 Proxy Discover          (cada 6h, fuentes SOCKS5)',\n    '   ✅ Proxy Validate           (cada 30min, POST /proxies/test)',\n    '   🖼️ Logo Pipeline            (logos DatosPeru → Oracle Storage)',\n    '',\n    '── LAST 10 PROCESSED ──────────────────────────',\n    ...recent.map(r => `   ${r.ruc} | ${(r.razon_social||'').substring(0,30).padEnd(30)} | ${(r.status||'').padEnd(20)} | ${r.fields||0} flds | ${r.tier} | ${r.error_type||'ok'}`),\n    '',\n    '── TOP 20 FAILURES ────────────────────────────',\n    `   Total errores activos: ${totalErrors}`,\n    ...failures.map(f => `   ${f.ruc} | ${(f.razon_social||'').substring(0,25)} | [${f.error_type||'?'}] ${(f.error||'no detail').substring(0,45)}`)\n  ].join('\\n')\n}};"
+        "jsCode": "const s = $('Query Stats').first().json;\nconst recent = $('Last 10 Processed').all().map(i => i.json);\nconst failures = $('Failed Companies').all().map(i => i.json);\n\n// Proxy stats\nlet proxyData = {};\ntry {\n  const px = $('Proxy Pool Stats').all();\n  px.forEach(p => { proxyData[p.json.status] = { cnt: p.json.cnt, avg_ms: p.json.avg_ms }; });\n} catch(e) {}\n\n// Logo stats\nlet logoData = {};\ntry {\n  logoData = $('Logo Stats').first().json;\n} catch(e) {}\n\nconst total = parseInt(s.total) || 0;\nconst enriched = parseInt(s.enriched) || 0;\nconst failed = parseInt(s.failed) || 0;\nconst failedRetry = parseInt(s.failed_retry) || 0;\nconst notFound = parseInt(s.not_found) || 0;\nconst fixedByRetry = parseInt(s.fixed_by_retry) || 0;\nconst TARGET = 872051;\n\nconst t1 = parseInt(s.tier1) || 0;\nconst t2 = parseInt(s.tier2) || 0;\nconst t3 = parseInt(s.tier3) || 0;\nconst t4 = parseInt(s.tier4) || 0;\nconst t5 = parseInt(s.tier5) || 0;\n\nconst TARGET_T1 = 915, TARGET_T2 = 798, TARGET_T3 = 4410, TARGET_T4 = 4700, TARGET_T5 = 861228;\n\nconst errProxy = parseInt(s.err_proxy) || 0;\nconst errParse = parseInt(s.err_parse) || 0;\nconst errNotFound = parseInt(s.err_not_found) || 0;\n\nconst avgSec = parseFloat(s.avg_sec) || 0;\nconst remaining = TARGET - total;\nconst rate = avgSec > 0 ? Math.round(3600 / (avgSec + 15)) : 0;\nconst etaHours = rate > 0 ? Math.round(remaining / rate) : 0;\nconst etaDays = rate > 0 ? (etaHours / 24).toFixed(1) : '?';\n\nconst processed = total - notFound;\nconst successRate = processed > 0 ? ((enriched / processed) * 100).toFixed(1) : '0';\nconst totalErrors = failed + failedRetry;\n\n// Logo KPIs\nconst logosOk = parseInt(logoData.logos_ok) || 0;\nconst logosFailed = parseInt(logoData.logos_failed_max) || 0;\nconst logosRetrying = parseInt(logoData.logos_retrying) || 0;\nconst logosPending = parseInt(logoData.logos_pending) || 0;\nconst logosTotal = parseInt(logoData.total_enriched) || 0;\nconst logoPct = logosTotal > 0 ? ((logosOk / logosTotal) * 100).toFixed(1) : '0';\n\n// Proxy summary\nconst pxActive = proxyData.active || { cnt: 0, avg_ms: '?' };\nconst pxTesting = proxyData.testing || { cnt: 0, avg_ms: '?' };\nconst pxCooldown = proxyData.cooldown || { cnt: 0, avg_ms: '?' };\nconst pxBlacklisted = proxyData.blacklisted || { cnt: 0, avg_ms: '?' };\n\nreturn { json: {\n  '📊 PIPELINE MONITOR v2.1': '═══════════════════════════════',\n  target: `${TARGET.toLocaleString()} empresas (Padrón RUC completo)`,\n  arquitectura: '10 batches × ~87K | Retry cada 2h',\n\n  '🎯 PROGRESO': '═══════════════════════════════',\n  progress: `${total.toLocaleString()} / ${TARGET.toLocaleString()} (${((total/TARGET)*100).toFixed(2)}%)`,\n  remaining: `${remaining.toLocaleString()} pendientes`,\n  eta: `~${etaHours}h (~${etaDays} días)`,\n  rate: `~${rate}/hora`,\n\n  '✅ RESULTADOS': '═══════════════════════════════',\n  enriched: enriched.toLocaleString(),\n  not_found_datosperu: `${notFound.toLocaleString()} (permanente, no retry)`,\n  failed_pending: `${failed.toLocaleString()} (primer intento)`,\n  failed_after_retry: `${failedRetry.toLocaleString()} (retry fallido)`,\n  fixed_by_retry: `${fixedByRetry.toLocaleString()} (recuperados)`,\n  success_rate: `${successRate}% (excluyendo not_found)`,\n\n  '📈 POR TIER': '═══════════════════════════════',\n  tier1: `${t1.toLocaleString()} / ${TARGET_T1.toLocaleString()} (${((t1/TARGET_T1)*100).toFixed(1)}%) — ≥1000 emp`,\n  tier2: `${t2.toLocaleString()} / ${TARGET_T2.toLocaleString()} (${((t2/TARGET_T2)*100).toFixed(1)}%) — 500-999`,\n  tier3: `${t3.toLocaleString()} / ${TARGET_T3.toLocaleString()} (${((t3/TARGET_T3)*100).toFixed(1)}%) — 100-499`,\n  tier4: `${t4.toLocaleString()} / ${TARGET_T4.toLocaleString()} (${((t4/TARGET_T4)*100).toFixed(1)}%) — 50-99`,\n  tier5: `${t5.toLocaleString()} / ${TARGET_T5.toLocaleString()} (${((t5/TARGET_T5)*100).toFixed(1)}%) — 0-49`,\n\n  '❌ ERRORES (por tipo)': '═══════════════════════════════',\n  proxy_errors: `${errProxy} (proxy caído/blacklisted)`,\n  parse_errors: `${errParse} (HTML inesperado)`,\n  not_found_errors: `${errNotFound} (no existe en DatosPeru)`,\n  total_active_errors: totalErrors,\n\n  '🖼️ LOGOS': '═══════════════════════════════',\n  logos_downloaded: `${logosOk.toLocaleString()} / ${logosTotal.toLocaleString()} (${logoPct}%)`,\n  logos_pending: `${logosPending.toLocaleString()} (sin intentar)`,\n  logos_retrying: `${logosRetrying.toLocaleString()} (1-2 intentos, reintentando)`,\n  logos_failed: `${logosFailed.toLocaleString()} (3+ intentos, descartados)`,\n\n  '🔌 PROXIES': '═══════════════════════════════',\n  proxy_active: `${pxActive.cnt} (avg ${pxActive.avg_ms || '?'}ms)`,\n  proxy_testing: `${pxTesting.cnt}`,\n  proxy_cooldown: `${pxCooldown.cnt}`,\n  proxy_blacklisted: `${pxBlacklisted.cnt}`,\n\n  '⏱️ TIMING': '═══════════════════════════════',\n  avg_scrape: `${s.avg_sec || 'N/A'}s`,\n  avg_fields: s.avg_fields || 'N/A',\n  wait_per_item: '15s',\n  started_at: s.started_at || 'N/A',\n  last_updated: s.last_updated || 'N/A',\n\n  '🔄 WORKFLOWS ACTIVOS': '═══════════════════════════════',\n  workflows: [\n    'Enrichment Batch XX/10 (secuencial, 1 a la vez)',\n    'Retry Failed Companies (cada 2h)',\n    'Proxy Discover (cada 6h, SOCKS5)',\n    'Proxy Validate (cada 30min)',\n    'Logo Pipeline (cada 2h, 50/batch)'\n  ],\n\n  '📋 LAST 10': '═══════════════════════════════',\n  recent: recent.map(r =>\n    `${r.ruc} | ${(r.razon_social||'').substring(0,30)} | ${r.status} | ${r.fields||0} fields | ${r.tier} | ${r.error_type || 'ok'}`\n  ),\n\n  '🔄 RETRIES': '═══════════════════════════════',\n  retry_summary: `${fixedByRetry} fixed | ${failedRetry} still failing | ${failed} pending retry`,\n\n  '❌ FAILURES (top 20)': `${totalErrors} total`,\n  failed_list: failures.map(f =>\n    `${f.ruc} | ${(f.razon_social||'').substring(0,30)} | ${f.status} | [${f.error_type||'?'}] ${(f.error||'Unknown error').substring(0,50)}`\n  )\n}};"
       },
       "id": "mon2-08-format",
       "name": "Format Report",
@@ -172,7 +172,7 @@
             "index": 0
           },
           {
-            "node": "Per-Batch Stats",
+            "node": "Logo Stats",
             "type": "main",
             "index": 0
           }
@@ -223,7 +223,7 @@
         ]
       ]
     },
-    "Per-Batch Stats": {
+    "Logo Stats": {
       "main": [
         [
           {
@@ -250,7 +250,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "monitor-v2.1",
+  "versionId": "monitor-v2.2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
