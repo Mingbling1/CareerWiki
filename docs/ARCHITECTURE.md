@@ -76,10 +76,10 @@ graph TB
         META[Postgres Meta]
         STUDIO_P[Studio<br/>studio.empliq.io]
         SCRAPER[Scraper<br/>scraper.empliq.io]
-        N8N_P[n8n<br/>n8n.musuq.me]
-        CW[Chatwoot<br/>app.musuq.me]
-        AF[Affine<br/>affine.musuq.me]
-        DOZ[Dozzle<br/>logs.musuq.me]
+        N8N_P[musuq-n8n<br/>n8n.musuq.me]
+        CW[musuq-chatwoot<br/>app.musuq.me]
+        AF[musuq-affine<br/>affine.musuq.me]
+        DOZ[musuq-dozzle<br/>logs.musuq.me]
     end
 
     INET((Internet)) --> TRAEFIK
@@ -287,11 +287,42 @@ erDiagram
 | `auth.empliq.io` | empliq-kong | Supabase API Gateway (GoTrue) |
 | `studio.empliq.io` | empliq-studio | Dashboard Supabase |
 | `scraper.empliq.io` | empliq-scraper | Scraper API |
-| `n8n.musuq.me` | n8n | Automatización |
-| `app.musuq.me` | chatwoot | Soporte |
-| `affine.musuq.me` | affine | Docs/Whiteboard |
-| `logs.musuq.me` | dozzle | Log viewer |
+| `n8n.musuq.me` | musuq-n8n | Automatización |
+| `app.musuq.me` | musuq-chatwoot | Soporte |
+| `affine.musuq.me` | musuq-affine | Docs/Whiteboard |
+| `logs.musuq.me` | musuq-dozzle | Log viewer |
 | `traefik.musuq.me` | traefik | Dashboard Traefik |
+
+---
+
+## Convención de Nombres de Contenedores
+
+Patrón: `[dominio]-[app]`
+
+| Dominio | Prefijo | Ejemplo | Uso |
+|---------|---------|---------|-----|
+| `empliq.io` | `empliq-` | `empliq-backend`, `empliq-kong` | Servicios públicos |
+| `musuq.me` | `musuq-` | `musuq-n8n`, `musuq-chatwoot` | Herramientas internas |
+| (infra compartida) | sin prefijo | `traefik` | Infraestructura base |
+
+### Mapeo completo
+
+| Contenedor | Dominio | Servicio |
+|------------|---------|----------|
+| `empliq-backend` | api.empliq.io | Backend API (NestJS) |
+| `empliq-kong` | auth.empliq.io | Supabase API Gateway |
+| `empliq-studio` | studio.empliq.io | Dashboard Supabase |
+| `empliq-scraper` | scraper.empliq.io | Scraper API |
+| `musuq-n8n` | n8n.musuq.me | Automatización |
+| `musuq-chatwoot` | app.musuq.me | Soporte (+ `musuq-chatwoot-sidekiq`) |
+| `musuq-affine` | affine.musuq.me | Docs/Whiteboard |
+| `musuq-dozzle` | logs.musuq.me | Log viewer |
+| `traefik` | traefik.musuq.me | Reverse proxy HTTPS |
+| `musuq-postgres` | — | PostgreSQL 16 |
+| `musuq-redis` | — | Redis (Chatwoot) |
+
+> **Nota:** Los nombres de routers y services de Traefik siguen el mismo patrón:
+> `traefik.http.routers.musuq-n8n-secure`, `traefik.http.services.musuq-n8n`.
 
 ---
 
