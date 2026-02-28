@@ -200,6 +200,8 @@ disponibles en toda la aplicación sin importar manualmente.
 
 ## Flujo de Google OAuth
 
+### Local (desarrollo)
+
 1. **Usuario** → Click "Continuar con Google" en `/login`
 2. **Next.js** → `supabase.auth.signInWithOAuth({ provider: 'google' })`
 3. **Browser** → Redirect a `http://localhost:8000/auth/v1/authorize?provider=google`
@@ -211,10 +213,24 @@ disponibles en toda la aplicación sin importar manualmente.
 9. **Next.js Route** → `exchangeCodeForSession(code)` → Cookie de sesión
 10. **Next.js** → Redirect a `/empresas`
 
+### Producción
+
+Mismo flujo pero con dominios reales:
+- **NEXT_PUBLIC_SUPABASE_URL:** `https://auth.empliq.io`
+- **GoTrue API_EXTERNAL_URL:** `https://auth.empliq.io`
+- **Google callback:** `https://auth.empliq.io/auth/v1/callback`
+- **GOTRUE_SITE_URL:** `https://empliq.io`
+- **Redirect después de auth:** `https://empliq.io/auth/callback`
+
 ### Google Cloud Console Setup
 
+**Desarrollo:**
 - **Authorized redirect URI**: `http://localhost:8000/auth/v1/callback`
 - **Authorized JavaScript origins**: `http://localhost:3000`
+
+**Producción:**
+- **Authorized redirect URI**: `https://auth.empliq.io/auth/v1/callback`
+- **Authorized JavaScript origins**: `https://empliq.io`
 
 ---
 
@@ -311,13 +327,14 @@ GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:<PASSWORD>@<HOST>:5432/<DB
 
 ### Checklist para producción
 
-- [ ] Generar JWT_SECRET propio (`openssl rand -base64 48`)
-- [ ] Generar ANON_KEY y SERVICE_ROLE_KEY con el nuevo JWT_SECRET
-- [ ] Usar passwords seguros para `supabase_auth_admin` y `authenticator`
-- [ ] Cambiar `API_EXTERNAL_URL` y `GOTRUE_SITE_URL` al dominio real
-- [ ] Cambiar `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI` al dominio real
-- [ ] Configurar CORS en Kong para el dominio real
-- [ ] En Google Cloud Console: agregar redirect URI de producción
+- [x] Generar JWT_SECRET propio (`openssl rand -base64 48`)
+- [x] Generar ANON_KEY y SERVICE_ROLE_KEY con el nuevo JWT_SECRET
+- [x] Usar passwords seguros para `supabase_auth_admin` y `authenticator`
+- [x] `API_EXTERNAL_URL` = `https://auth.empliq.io`
+- [x] `GOTRUE_SITE_URL` = `https://empliq.io`
+- [x] `GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI` = `https://auth.empliq.io/auth/v1/callback`
+- [x] Kong expuesto en `auth.empliq.io` (Traefik labels)
+- [ ] En Google Cloud Console: agregar redirect URI `https://auth.empliq.io/auth/v1/callback`
 
 ---
 
@@ -325,7 +342,7 @@ GOTRUE_DB_DATABASE_URL=postgres://supabase_auth_admin:<PASSWORD>@<HOST>:5432/<DB
 
 - JWT tokens con expiración (1 hora, auto-refresh)
 - Cookies httpOnly gestionadas por `@supabase/ssr`
-- CORS configurado en Kong para `http://localhost:3000`
+- CORS configurado en Kong para `*` (origins)
 - Solo Google OAuth — sin email/password
 - `SERVICE_ROLE_KEY` solo en backend (bypass RLS)
 - RLS (Row Level Security) por configurar

@@ -22,7 +22,8 @@
 | `empliq.io` | Website (Next.js) | Cloudflare Workers |
 | `www.empliq.io` | Redirect → empliq.io | Cloudflare Workers |
 | `api.empliq.io` | API (NestJS) | Oracle + Traefik |
-| `auth.empliq.io` → `supabase.musuq.me` | Supabase GoTrue | Oracle + Traefik |
+| `auth.empliq.io` | Supabase GoTrue (Auth) | Oracle + Traefik |
+| `studio.empliq.io` | Supabase Studio | Oracle + Traefik |
 | `scraper.musuq.me` | Scraper API | Oracle + Traefik |
 
 ## Website — Cloudflare Workers
