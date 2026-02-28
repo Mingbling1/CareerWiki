@@ -2,115 +2,66 @@ import type { MetadataRoute } from "next";
 import { getAllCompanySlugs } from "@/lib/api-server";
 
 /**
- * Sitemap Index — Next.js genera /sitemap/0.xml, /sitemap/1.xml, etc.
+ * sitemap.xml — generado dinámicamente por Next.js.
  *
- * Con ~25,000 empresas × 4 sub-páginas = ~100,000 URLs.
- * El límite por archivo sitemap es 50,000 URLs.
- * Usamos chunks de 10,000 empresas (= 40,004 URLs con estáticas).
+ * Incluye rutas estáticas + una URL por cada empresa (~25,000).
+ * Solo incluye la página principal de cada empresa (no sub-páginas)
+ * para mantenernos bajo el límite de 50,000 URLs por sitemap.
  *
- * generateSitemaps() retorna los IDs de cada chunk.
- * sitemap({id}) genera el contenido de cada chunk.
+ * Google descubre las sub-páginas (/salarios, /resenas, /beneficios)
+ * automáticamente a través del crawling y los links internos.
  */
-
-const COMPANIES_PER_SITEMAP = 10000;
-
-// Cache the slugs across generateSitemaps() and sitemap() calls in the same build
-let cachedSlugs: { slug: string; updatedAt: string }[] | null = null;
-
-async function getSlugs() {
-  if (!cachedSlugs) {
-    cachedSlugs = await getAllCompanySlugs();
-  }
-  return cachedSlugs;
-}
-
-export async function generateSitemaps() {
-  const slugs = await getSlugs();
-  const totalChunks = Math.max(1, Math.ceil(slugs.length / COMPANIES_PER_SITEMAP));
-  return Array.from({ length: totalChunks }, (_, i) => ({ id: i }));
-}
-
-export default async function sitemap({
-  id,
-}: {
-  id: number;
-}): Promise<MetadataRoute.Sitemap> {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://empliq.io";
   const now = new Date();
-  const slugs = await getSlugs();
 
-  // Only the first sitemap includes static routes
-  const staticRoutes: MetadataRoute.Sitemap =
-    id === 0
-      ? [
-          {
-            url: baseUrl,
-            lastModified: now,
-            changeFrequency: "weekly",
-            priority: 1,
-          },
-          {
-            url: `${baseUrl}/empresas`,
-            lastModified: now,
-            changeFrequency: "daily",
-            priority: 0.9,
-          },
-          {
-            url: `${baseUrl}/salarios`,
-            lastModified: now,
-            changeFrequency: "daily",
-            priority: 0.9,
-          },
-          {
-            url: `${baseUrl}/privacidad`,
-            lastModified: now,
-            changeFrequency: "yearly",
-            priority: 0.3,
-          },
-          {
-            url: `${baseUrl}/terminos`,
-            lastModified: now,
-            changeFrequency: "yearly",
-            priority: 0.3,
-          },
-        ]
-      : [];
+  // Static routes
+  const staticRoutes: MetadataRoute.Sitemap = [
+    {
+      url: baseUrl,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 1,
+    },
+    {
+      url: `${baseUrl}/empresas`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/salarios`,
+      lastModified: now,
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/privacidad`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terminos`,
+      lastModified: now,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+  ];
 
-  // Slice companies for this chunk
-  const start = id * COMPANIES_PER_SITEMAP;
-  const end = start + COMPANIES_PER_SITEMAP;
-  const chunk = slugs.slice(start, end);
-
-  const companyRoutes: MetadataRoute.Sitemap = chunk.flatMap((company) => {
-    const lastMod = company.updatedAt ? new Date(company.updatedAt) : now;
-    const companyBase = `${baseUrl}/empresas/${company.slug}`;
-    return [
-      {
-        url: companyBase,
-        lastModified: lastMod,
-        changeFrequency: "weekly" as const,
-        priority: 0.7,
-      },
-      {
-        url: `${companyBase}/salarios`,
-        lastModified: lastMod,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      },
-      {
-        url: `${companyBase}/resenas`,
-        lastModified: lastMod,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      },
-      {
-        url: `${companyBase}/beneficios`,
-        lastModified: lastMod,
-        changeFrequency: "monthly" as const,
-        priority: 0.5,
-      },
-    ];
-  });
+  // Dynamic company routes — one URL per company (main page only)
+  let companyRoutes: MetadataRoute.Sitemap = [];
+  try {
+    const companies = await getAllCompanySlugs();
+    companyRoutes = companies.map((company) => ({
+      url: `${baseUrl}/empresas/${company.slug}`,
+      lastModified: company.updatedAt ? new Date(company.updatedAt) : now,
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
+    }));
+  } catch {
+    console.warn("sitemap: Could not fetch company slugs from API");
+  }
 
   return [...staticRoutes, ...companyRoutes];
 }
