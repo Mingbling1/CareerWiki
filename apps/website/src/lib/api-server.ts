@@ -53,14 +53,9 @@ export async function getCompanyForSEO(slug: string): Promise<CompanySEO | null>
 
 /**
  * Fetch all company slugs for sitemap generation.
- * Uses high limit to get all companies.
+ * Uses dedicated /companies/slugs endpoint (no pagination cap).
  */
 export async function getAllCompanySlugs(): Promise<CompanySlug[]> {
-  const result = await fetchServer<{ data: CompanySlug[] }>("/companies?limit=50000&fields=slug,updatedAt")
-  if (!result?.data) {
-    // Fallback: try without fields param
-    const fallback = await fetchServer<{ data: CompanySlug[] }>("/companies?limit=50000")
-    return fallback?.data || []
-  }
-  return result.data
+  const result = await fetchServer<CompanySlug[]>("/companies/slugs")
+  return result || []
 }
