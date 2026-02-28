@@ -96,3 +96,24 @@ Hay **dos tokens** distintos con propósitos distintos. NO mezclar.
 ## Troubleshooting
 
 Ver [TROUBLESHOOTING.md](./TROUBLESHOOTING.md).
+
+## Notas de Migración de Dominio
+
+> **Fecha:** 28 feb 2026
+
+### Migración completa a empliq.io
+
+Todos los servicios públicos migraron de `*.musuq.me` a `*.empliq.io`. Los DNS de `*.musuq.me` fueron eliminados en Cloudflare. Traefik ahora solo enruta por dominio empliq.io:
+
+```
+Host(`api.empliq.io`)      # empliq-backend
+Host(`auth.empliq.io`)     # empliq-kong (GoTrue)
+Host(`studio.empliq.io`)   # empliq-studio
+Host(`scraper.empliq.io`)  # empliq-scraper
+```
+
+Let's Encrypt genera certificados vía DNS-01 Challenge (Cloudflare) automáticamente.
+
+Servicios internos (n8n, chatwoot, affine, dozzle, traefik dashboard) permanecen en `*.musuq.me`.
+
+**Importante:** Al cambiar las labels de Traefik hay que recrear el container (stop + rm + run). Las labels son inmutables una vez creado el container. El CI/CD de `musuq-platform` maneja esto automáticamente al hacer push a `main`.
