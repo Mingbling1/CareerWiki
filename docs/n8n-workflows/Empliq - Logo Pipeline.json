@@ -58,7 +58,7 @@
     },
     {
       "parameters": {
-        "url": "=https://scraper.musuq.me/logo/fetch?{{ $json.hasDomain ? 'domain=' + encodeURIComponent($json.domain) + '&' : '' }}name={{ encodeURIComponent($json.cleanName) }}&ruc={{ $json.ruc }}",
+        "url": "=https://scraper.empliq.io/logo/fetch?{{ $json.hasDomain ? 'domain=' + encodeURIComponent($json.domain) + '&' : '' }}name={{ encodeURIComponent($json.cleanName) }}&ruc={{ $json.ruc }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

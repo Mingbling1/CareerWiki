@@ -2,7 +2,7 @@
 
 > Mapa completo de la documentacion del proyecto. Usar como punto de entrada.
 >
-> **Ultima actualizacion:** 24 de febrero de 2026
+> **Ultima actualizacion:** 27 de febrero de 2026
 
 ---
 

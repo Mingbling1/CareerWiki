@@ -12,7 +12,7 @@ El website consume la **API de producción** por defecto:
 
 ```env
 # apps/website/.env.local
-NEXT_PUBLIC_API_URL=https://api.musuq.me/api    # producción
+NEXT_PUBLIC_API_URL=https://api.empliq.io/api    # producción
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000   # auth local
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```

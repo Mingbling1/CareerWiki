@@ -24,7 +24,7 @@
 | `api.empliq.io` | API (NestJS) | Oracle + Traefik |
 | `auth.empliq.io` | Supabase GoTrue (Auth) | Oracle + Traefik |
 | `studio.empliq.io` | Supabase Studio | Oracle + Traefik |
-| `scraper.musuq.me` | Scraper API | Oracle + Traefik |
+| `scraper.empliq.io` | Scraper API | Oracle + Traefik |
 
 ## Website — Cloudflare Workers
 
@@ -90,7 +90,7 @@ Hay **dos tokens** distintos con propósitos distintos. NO mezclar.
 
 > **IMPORTANTE:**
 > - `CF_WORKERS_API_TOKEN` y `CF_WORKERS_ACCOUNT_ID` van en el repo **empliq-website**, NO en musuq-platform.
-> - `CLOUDFLARE_API_TOKEN` en musuq-platform es para Traefik DNS Challenge (Let's Encrypt certs para api.empliq.io, *.musuq.me).
+> - `CLOUDFLARE_API_TOKEN` en musuq-platform es para Traefik DNS Challenge (Let's Encrypt certs para *.empliq.io, *.musuq.me).
 > - Si se actualiza el token de Traefik en CF Dashboard, el valor NO cambia (solo se expanden permisos de zona).
 
 ## Troubleshooting

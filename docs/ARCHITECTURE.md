@@ -33,7 +33,7 @@ graph TB
     STUDIO --> KONG
 
     subgraph "Producción (Oracle Cloud ARM)"
-        PROD_API[Backend API<br/>api.musuq.me]
+        PROD_API[Backend API<br/>api.empliq.io]
         PROD_PG[(PostgreSQL<br/>empliq_prod)]
     end
 
@@ -57,7 +57,7 @@ graph TB
 > **Nota:** El website local consume el API **local** (`localhost:4000`) que conecta
 > a `empliq_pre_prod`. Supabase Auth (GoTrue) corre local para desarrollo de OAuth
 > sin afectar producción. Para consumir la API de producción, cambiar
-> `NEXT_PUBLIC_API_URL=https://api.musuq.me/api` en `docker/.env`.
+> `NEXT_PUBLIC_API_URL=https://api.empliq.io/api` en `docker/.env`.
 >
 > **Base de datos local:** `empliq_pre_prod` — staging con estructura Prisma idónea.
 > GoTrue local también conecta a `empliq_pre_prod` (schema `auth` separado del `public`).
@@ -70,12 +70,12 @@ graph TB
         TRAEFIK[Traefik<br/>:443 HTTPS]
         PG[(musuq-postgres<br/>PostgreSQL 16)]
         REDIS[(musuq-redis)]
-        BACKEND[empliq-backend<br/>api.musuq.me]
-        AUTH[GoTrue<br/>supabase.musuq.me/auth]
-        KONG[Kong<br/>supabase.musuq.me]
+        BACKEND[empliq-backend<br/>api.empliq.io]
+        AUTH[GoTrue<br/>auth.empliq.io]
+        KONG[Kong<br/>auth.empliq.io]
         META[Postgres Meta]
-        STUDIO_P[Studio<br/>studio.musuq.me]
-        SCRAPER[Scraper<br/>scraper.musuq.me]
+        STUDIO_P[Studio<br/>studio.empliq.io]
+        SCRAPER[Scraper<br/>scraper.empliq.io]
         N8N_P[n8n<br/>n8n.musuq.me]
         CW[Chatwoot<br/>app.musuq.me]
         AF[Affine<br/>affine.musuq.me]
@@ -154,7 +154,7 @@ sequenceDiagram
     participant W as Website (Next.js :3000)
     participant K as Kong (:8000)
     participant G as GoTrue (:9999)
-    participant A as API (api.musuq.me)
+    participant A as API (api.empliq.io)
     participant DB as PostgreSQL
 
     U->>W: Visita landing / app
@@ -283,10 +283,10 @@ erDiagram
 
 | Subdominio | Servicio | Descripción |
 |------------|----------|-------------|
-| `api.musuq.me` | empliq-backend | Backend API (NestJS) |
-| `supabase.musuq.me` | empliq-kong | Supabase API Gateway |
-| `studio.musuq.me` | empliq-studio | Dashboard Supabase |
-| `scraper.musuq.me` | empliq-scraper | Scraper API |
+| `api.empliq.io` | empliq-backend | Backend API (NestJS) |
+| `auth.empliq.io` | empliq-kong | Supabase API Gateway (GoTrue) |
+| `studio.empliq.io` | empliq-studio | Dashboard Supabase |
+| `scraper.empliq.io` | empliq-scraper | Scraper API |
 | `n8n.musuq.me` | n8n | Automatización |
 | `app.musuq.me` | chatwoot | Soporte |
 | `affine.musuq.me` | affine | Docs/Whiteboard |
@@ -300,7 +300,7 @@ erDiagram
 | Repo | Contenido | Deploy |
 |------|-----------|--------|
 | `CareerWiki` (monorepo) | `apps/{api, website, empliq-scraper-api}`, docs, scripts | — |
-| `empliq-backend` | Backend API standalone (clon de `apps/api`) | `api.musuq.me` |
+| `empliq-backend` | Backend API standalone (clon de `apps/api`) | `api.empliq.io` |
 | `musuq-platform` | Scripts infra Oracle Cloud, CI/CD, Docker services | Oracle ARM |
 
 ---

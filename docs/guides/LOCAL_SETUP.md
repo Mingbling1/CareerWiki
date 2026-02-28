@@ -34,7 +34,7 @@
 - El **backend local** (:4000) conecta a `empliq_pre_prod` via Prisma
 - **GoTrue local** conecta a `empliq_pre_prod` (schema `auth`)
 - **Supabase Auth solo es para desarrollo** — los usuarios de OAuth local NO afectan producción
-- En producción, todo consume `empliq_prod` con su propio GoTrue (`supabase.musuq.me`)
+- En producción, todo consume `empliq_prod` con su propio GoTrue (`auth.empliq.io`)
 
 Ver `docs/technical/DATABASE_SAFETY.md` para reglas críticas de seguridad.
 
@@ -65,7 +65,7 @@ NEXT_PUBLIC_API_URL=http://localhost:4000/api   # API local consumiendo empliq_p
 ```
 
 > Para usar la API de **producción** en vez de local:
-> `NEXT_PUBLIC_API_URL=https://api.musuq.me/api`
+> `NEXT_PUBLIC_API_URL=https://api.empliq.io/api`
 
 ### `apps/api/.env`
 
@@ -85,7 +85,7 @@ ORACLE_PUBLIC_URL_BASE=https://objectstorage.sa-saopaulo-1.oraclecloud.com/n/...
 ```env
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-NEXT_PUBLIC_API_URL=https://api.musuq.me/api
+NEXT_PUBLIC_API_URL=https://api.empliq.io/api
 ```
 
 ### `apps/empliq-scraper-api/.env`

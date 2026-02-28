@@ -140,7 +140,7 @@ Si el backend está corriendo y se modifica el schema:
 - [ ] Backup de empliq_prod (opcional pero recomendado)
 - [ ] `prisma migrate deploy` contra empliq_prod
 - [ ] Restart del backend de producción
-- [ ] Verificar api.musuq.me/api/companies funciona
+- [ ] Verificar api.empliq.io/api/companies funciona
 
 ---
 

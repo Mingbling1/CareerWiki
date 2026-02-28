@@ -27,7 +27,7 @@
 |  Storage (Oracle Object Storage) |  Completado | 100% |
 |  Scraper Microservice |  Completado | 100% |
 |  DatosPeru Enrichment |  Producción | 100% |
-|  Backend Producción (`api.musuq.me`) |  Desplegado | 100% |
+|  Backend Producción (`api.empliq.io`) |  Desplegado | 100% |
 |  Salarios |  Parcial | 40% |
 |  Comentarios |  Parcial | 40% |
 |  Puestos (vista detalle) |  Pendiente | 10% |
@@ -87,7 +87,7 @@
 
 ## Completado Recientemente
 
-- [x] ~~Backend desplegado en `api.musuq.me`~~ (24 feb 2026)
+- [x] ~~Backend desplegado en `api.empliq.io`~~ (24 feb 2026)
 - [x] ~~Supabase GoTrue local para OAuth development~~ (24 feb 2026)
 - [x] ~~Fix Buffer/BodyInit en storage (API + Scraper)~~ (24 feb 2026)
 - [x] ~~Migración de Better Auth → Supabase GoTrue~~ (23 feb 2026)
@@ -125,7 +125,7 @@
 - **Auth:** Supabase GoTrue self-hosted (Google OAuth) — sesiones con JWT
 - **Storage:** Oracle Object Storage (PAR upload) — **no** Supabase Storage
 - **Deploy:** Oracle Cloud ARM + Docker + Traefik
-- **Backend prod:** `https://api.musuq.me/api` (repo: empliq-backend)
+- **Backend prod:** `https://api.empliq.io/api` (repo: empliq-backend)
 - **Datos:** 6,123 empresas enriquecidas (Tier 1-3) en `companies_raw` (JSONB)
 - **Diseño:** Monocromático (negro/blanco/plata) — color solo para impacto
 - **Dev:** Website local consume API de producción. OAuth corre local.

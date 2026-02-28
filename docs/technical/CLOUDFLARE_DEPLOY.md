@@ -345,7 +345,7 @@ jobs:
       - name: Build with OpenNext
         run: npx opennextjs-cloudflare build
         env:
-          NEXT_PUBLIC_API_URL: https://api.empliq.io
+          NEXT_PUBLIC_API_URL: https://api.empliq.io/api
           NEXT_PUBLIC_SUPABASE_URL: https://auth.empliq.io
           NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJ...(anon key completa)
 

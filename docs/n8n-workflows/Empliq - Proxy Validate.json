@@ -71,7 +71,7 @@
     },
     {
       "parameters": {
-        "url": "=https://scraper.musuq.me/proxies/test",
+        "url": "=https://scraper.empliq.io/proxies/test",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [

@@ -2,7 +2,7 @@
 
 > NestJS backend con arquitectura hexagonal. Puerto: 4000.
 >
-> **Producción:** `https://api.musuq.me/api` (repo: `empliq-backend`)
+> **Producción:** `https://api.empliq.io/api` (repo: `empliq-backend`)
 
 ## Resumen
 
@@ -15,7 +15,7 @@ El **website local consume la API de producción** por defecto. El API local (:4
 | Repo | Propósito |
 |------|-----------|
 | `CareerWiki` (monorepo) `apps/api/` | Desarrollo local, código fuente |
-| `empliq-backend` | Deploy a producción (`api.musuq.me`) |
+| `empliq-backend` | Deploy a producción (`api.empliq.io`) |
 
 Cuando se modifica `apps/api/`, sincronizar cambios a `empliq-backend` y hacer push.
 
