@@ -190,7 +190,7 @@ export function Hero() {
             {/* Badge */}
             <motion.div variants={itemVariants} className="inline-flex self-start">
               <div className="flex items-center gap-2 bg-neutral-900/10 backdrop-blur-sm border border-neutral-400/30 rounded-full px-4 py-2">
-                <span className="text-neutral-700 font-medium text-sm">🇵🇪 Hecho por peruanos, para peruanos</span>
+                <span className="text-neutral-700 font-medium text-sm">Buscador de salarios y empresas</span>
               </div>
             </motion.div>
 

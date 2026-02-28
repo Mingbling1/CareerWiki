@@ -14,7 +14,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Empliq",
-  url: "https://empliq.com",
+  url: "https://empliq.io",
   description:
     "Plataforma open-source donde profesionales peruanos comparten información real sobre salarios, puestos y organigramas de empresas.",
   applicationCategory: "BusinessApplication",
@@ -27,7 +27,7 @@ const jsonLd = {
   creator: {
     "@type": "Organization",
     name: "Empliq",
-    url: "https://empliq.com",
+    url: "https://empliq.io",
   },
 }
 

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = "https://empliq.com";
+const SITE_URL = "https://empliq.io";
 
 export const metadata: Metadata = {
   // ── Core ──

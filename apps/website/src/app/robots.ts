@@ -9,14 +9,14 @@ import type { MetadataRoute } from "next";
  * Referencia: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/robots
  */
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = "https://empliq.com";
+  const baseUrl = "https://empliq.io";
 
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/_next/", "/admin/"],
+        disallow: ["/api/", "/_next/", "/admin/", "/login", "/auth/", "/configuracion", "/test-avatars"],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

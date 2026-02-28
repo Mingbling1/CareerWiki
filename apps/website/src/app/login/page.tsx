@@ -38,8 +38,8 @@ export default function LoginPage() {
             </blockquote>
             <div className="flex items-center gap-3">
               <Image
-                src="/avatars/avatar_woman_long_hair.png"
-                alt="Usuario de Empliq"
+                src="/illustrations/avatars/avatar_women_emotions_monochrome_flat_linear_character_heads_set_151150_15217_01.png"
+                alt="Avatar de usuario"
                 width={40}
                 height={40}
                 className="h-10 w-10 rounded-full object-cover"
