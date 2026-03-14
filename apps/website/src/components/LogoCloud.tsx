@@ -19,14 +19,14 @@ const logos = [
 
 export function LogoCloud() {
   return (
-    <section className="relative py-16 border-y border-neutral-200 bg-white/80 backdrop-blur-xl">
+    <section className="relative py-10 lg:py-8 border-y border-neutral-200 bg-white/80 backdrop-blur-xl">
       {/* Label */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="text-center mb-10"
+        className="text-center mb-6 lg:mb-5"
       >
         <p className="text-neutral-500 text-sm font-medium tracking-wider uppercase">
           Descubre qué pasa dentro de las{' '}

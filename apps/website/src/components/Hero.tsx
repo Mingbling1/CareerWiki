@@ -178,11 +178,11 @@ export function Hero() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-4 md:pt-12 pb-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-8 pt-4 md:pt-8 pb-6">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-10 items-center">
           {/* Left column - Text */}
           <motion.div
-            className="flex flex-col gap-8"
+            className="flex flex-col gap-5"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
@@ -410,7 +410,7 @@ export function Hero() {
       </div>
 
       {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent z-[2]" />
+      <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white to-transparent z-[2]" />
     </section>
   )
 }
