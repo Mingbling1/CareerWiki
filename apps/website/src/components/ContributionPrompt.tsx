@@ -437,17 +437,15 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {/* Company search - overflow-visible to allow dropdown to escape */}
-      <div className="relative overflow-visible">
-        <CompanySearchInput
-          selectedCompany={selectedCompany}
-          onSelect={setSelectedCompany}
-        />
-      </div>
+      {/* Company search */}
+      <CompanySearchInput
+        selectedCompany={selectedCompany}
+        onSelect={setSelectedCompany}
+      />
 
-      {/* Scrollable area for the rest of the form (once company selected) */}
+      {/* Rest of the form (once company selected) */}
       {selectedCompany && (
-        <div className="max-h-[55vh] overflow-y-auto space-y-5 -mx-1 px-1 overflow-x-hidden">
+        <div className="space-y-5">
           <JobTitleComboboxInline
             value={jobTitle}
             onChange={(v) => setValue("jobTitle", v, { shouldValidate: true })}
@@ -790,14 +788,16 @@ export function ContributionPrompt() {
 
       {/* Dialog with embedded form */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-visible p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+          <DialogHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Reportar salario
             </DialogTitle>
           </DialogHeader>
-          <DialogSalaryForm onSuccess={handleContributionSuccess} />
+          <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 px-4 pb-4 sm:px-6 sm:pb-6">
+            <DialogSalaryForm onSuccess={handleContributionSuccess} />
+          </div>
         </DialogContent>
       </Dialog>
     </>
