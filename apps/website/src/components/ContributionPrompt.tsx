@@ -229,7 +229,7 @@ function CompanySearchInput({
       {open && results.length > 0 && (
         <div
           ref={listRef}
-          className="absolute z-[100] mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden"
+          className="mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden"
         >
           <div className="max-h-60 overflow-y-auto py-1">
             {results.map((company) => (
@@ -336,7 +336,7 @@ function JobTitleComboboxInline({
         />
       </div>
       {open && suggestions.length > 0 && (
-        <div ref={listRef} className="absolute z-50 mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden">
+        <div ref={listRef} className="mt-1 w-full rounded-lg border border-border/40 bg-card shadow-lg overflow-hidden">
           <div className="max-h-48 overflow-y-auto py-1">
             {suggestions.map((s, i) => (
               <button
@@ -788,14 +788,14 @@ export function ContributionPrompt() {
 
       {/* Dialog with embedded form */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
-          <DialogHeader className="p-4 pb-3 sm:p-6 sm:pb-3">
+        <DialogContent className="sm:max-w-lg max-h-[85vh] p-0 gap-0 flex flex-col">
+          <DialogHeader className="p-4 pb-3 sm:p-6 sm:pb-3 shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />
               Reportar salario
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto overflow-x-hidden flex-1 min-h-0 px-4 pb-4 sm:px-6 sm:pb-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 pb-4 sm:px-6 sm:pb-6">
             <DialogSalaryForm onSuccess={handleContributionSuccess} />
           </div>
         </DialogContent>
