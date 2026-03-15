@@ -197,7 +197,7 @@ export function Hero() {
             {/* Main heading */}
             <motion.h1
               variants={itemVariants}
-              className="text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl font-bold text-neutral-900 leading-[1.1] tracking-tight"
+              className="text-[2rem] sm:text-5xl md:text-6xl lg:text-6xl font-bold text-neutral-900 leading-[1.1] tracking-tight"
             >
               <AnimatedHeadline text="Todos merecemos" />{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-neutral-900 via-neutral-600 to-neutral-400">
