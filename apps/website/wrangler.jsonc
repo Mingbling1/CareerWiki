@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "empliq-website",
+  "account_id": "70d3ebd86fd199ed070cc93d3296abca",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-06-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static assets served by Cloudflare CDN
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  // Observability — logs enabled for debugging, traces disabled to save costs
+  "observability": {
+    "enabled": false,
+    "head_sampling_rate": 1,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1,
+      "persist": true,
+      "invocation_logs": true
+    },
+    "traces": {
+      "enabled": false,
+      "persist": true,
+      "head_sampling_rate": 1
+    }
+  },
+
+  // Production environment variables (public only — secrets via dashboard)
+  "vars": {
+    "NEXT_PUBLIC_API_URL": "https://api.empliq.io/api",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://auth.empliq.io",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzcxOTExMDc2LCJleHAiOjIwODcyNzEwNzZ9.g2zsY_CUXHREDrROGBiVRTh_5Z7KhFwOpAFLKFcoA5I",
+    "ENVIRONMENT": "production"
+  }
+}
