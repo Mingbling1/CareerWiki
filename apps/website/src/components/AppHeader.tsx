@@ -135,7 +135,7 @@ export function AppHeader({ initialAvatarUrl }: { initialAvatarUrl?: string | nu
                   {/* Anonymous avatar only */}
                   <Avatar className="h-8 w-8">
                     {customAvatar ? (
-                      <AvatarImage src={customAvatar} alt="Avatar anonimo" />
+                      <AvatarImage src={customAvatar} alt="Avatar anónimo" />
                     ) : (
                       <AvatarFallback className="text-xs bg-neutral-200">
                         {userInitials}
@@ -155,7 +155,7 @@ export function AppHeader({ initialAvatarUrl }: { initialAvatarUrl?: string | nu
                       <div className="px-4 py-3 border-b border-border/60">
                         <div className="flex items-center gap-3 mb-2">
                           {customAvatar && (
-                            <img src={customAvatar} alt="Avatar anonimo" className="h-8 w-8 rounded-lg border border-border/40" />
+                            <img src={customAvatar} alt="Avatar anónimo" className="h-8 w-8 rounded-lg border border-border/40" />
                           )}
                           <div>
                             <p className="text-sm font-medium">{userName}</p>

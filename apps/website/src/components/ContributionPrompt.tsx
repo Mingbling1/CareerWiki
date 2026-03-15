@@ -27,22 +27,22 @@ const TIERS = [
     id: "salary",
     delay: 45,
     title: "Comparte tu salario",
-    description: "Ayuda a otros profesionales compartiendo tu rango salarial de forma anonima.",
+    description: "Ayuda a otros profesionales compartiendo tu rango salarial de forma anónima.",
     cta: "Reportar salario",
     icon: DollarSign,
   },
   {
     id: "review",
     delay: 90,
-    title: "Como es trabajar ahi?",
-    description: "Tu experiencia puede ayudar a alguien a tomar una mejor decision laboral.",
-    cta: "Escribir resena",
+    title: "¿Cómo es trabajar ahí?",
+    description: "Tu experiencia puede ayudar a alguien a tomar una mejor decisión laboral.",
+    cta: "Escribir reseña",
     icon: Briefcase,
   },
   {
     id: "position",
     delay: 150,
-    title: "Que puesto tienes?",
+    title: "¿Qué puesto tienes?",
     description: "Agrega tu cargo para enriquecer los datos de tu empresa.",
     cta: "Agregar puesto",
     icon: Building2,
@@ -78,7 +78,7 @@ function fuzzyMatch(query: string, target: string): number {
 /* ─── Common Job Titles ─── */
 
 const COMMON_JOB_TITLES: Record<string, string[]> = {
-  "Tecnologia": [
+  "Tecnología": [
     "Desarrollador Full Stack", "Desarrollador Frontend", "Desarrollador Backend",
     "Ingeniero DevOps", "Ingeniero de Datos", "Analista de Datos",
     "Arquitecto de Software", "Tech Lead", "QA Engineer",
@@ -97,7 +97,7 @@ const COMMON_JOB_TITLES: Record<string, string[]> = {
     "Business Partner RRHH",
   ],
   "Operaciones": [
-    "Gerente de Operaciones", "Jefe de Logistica", "Analista de Procesos",
+    "Gerente de Operaciones", "Jefe de Logística", "Analista de Procesos",
   ],
 }
 
@@ -109,10 +109,10 @@ const ALL_JOB_TITLES = Object.entries(COMMON_JOB_TITLES).flatMap(
 
 const salarySchema = z.object({
   jobTitle: z.string().min(2, "Ingresa el nombre del puesto").max(120),
-  amount: z.number({ error: "Ingresa un monto valido" }).min(1, "El monto debe ser mayor a 0"),
+  amount: z.number({ error: "Ingresa un monto válido" }).min(1, "El monto debe ser mayor a 0"),
   currency: z.literal("PEN"),
   period: z.enum(["MONTHLY", "YEARLY"], { message: "Selecciona un periodo" }),
-  yearsExperience: z.number({ error: "Ingresa un numero" }).min(0).max(50).optional(),
+  yearsExperience: z.number({ error: "Ingresa un número" }).min(0).max(50).optional(),
   level: z.string().optional(),
 })
 
@@ -447,7 +447,7 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
 
       {/* Scrollable area for the rest of the form (once company selected) */}
       {selectedCompany && (
-        <div className="max-h-[55vh] overflow-y-auto space-y-5 -mx-1 px-1">
+        <div className="max-h-[55vh] overflow-y-auto space-y-5 -mx-1 px-1 overflow-x-hidden">
           <JobTitleComboboxInline
             value={jobTitle}
             onChange={(v) => setValue("jobTitle", v, { shouldValidate: true })}
@@ -481,7 +481,7 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
 
           {/* Salary + Period */}
           <div className="grid gap-3 grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 Salario bruto (S/)
               </label>
@@ -496,11 +496,11 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
               </div>
               {errors.amount && <p className="text-xs text-destructive mt-1">{errors.amount.message}</p>}
             </div>
-            <div>
+            <div className="min-w-0">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
                 Periodo
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 {([{ value: "MONTHLY" as const, label: "Mensual" }, { value: "YEARLY" as const, label: "Anual" }] as const).map((p) => (
                   <button
                     key={p.value}
@@ -523,7 +523,7 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
           {/* Years */}
           <div className="max-w-50">
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
-              Anos de experiencia
+              Años de experiencia
             </label>
             <Input
               type="number"
@@ -536,11 +536,11 @@ function DialogSalaryForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
 
           {/* Submit */}
-          <div className="flex items-center justify-between pt-2 border-t border-border/40">
-            <p className="text-[11px] text-muted-foreground">
-              100% anonimo
+          <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/40">
+            <p className="text-[11px] text-muted-foreground shrink-0">
+              100% anónimo
             </p>
-            <Button type="submit" size="sm" disabled={submitting} className="gap-2">
+            <Button type="submit" size="sm" disabled={submitting} className="gap-2 shrink-0">
               {submitting ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -721,7 +721,8 @@ export function ContributionPrompt() {
       {visible && currentTier && (
         <div
           className={cn(
-            "fixed bottom-6 right-6 z-50 max-w-sm transition-all duration-300",
+            "fixed bottom-6 z-50 transition-all duration-300",
+            "left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm",
             closing
               ? "opacity-0 translate-y-4 scale-95"
               : "opacity-100 translate-y-0 scale-100"
@@ -789,7 +790,7 @@ export function ContributionPrompt() {
 
       {/* Dialog with embedded form */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-visible">
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-visible p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="h-5 w-5" />

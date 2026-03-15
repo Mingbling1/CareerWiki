@@ -221,7 +221,7 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
         {/* Custom anonymous avatar */}
         <Avatar className="h-14 w-14 border-2 border-border/60">
           {selectedAvatar ? (
-            <AvatarImage src={selectedAvatar} alt="Avatar anonimo" />
+            <AvatarImage src={selectedAvatar} alt="Avatar anónimo" />
           ) : (
             <AvatarFallback className="text-xs bg-muted text-muted-foreground">
               Anon
@@ -242,7 +242,7 @@ function PerfilSection({ user }: { user: SupabaseUser | null }) {
             </p>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Tu avatar anonimo es visible publicamente
+            Tu avatar anónimo es visible públicamente
           </p>
         </div>
       </div>
