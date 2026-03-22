@@ -109,7 +109,41 @@ CREATE INDEX IF NOT EXISTS idx_migration_log_status ON _migration_log(status);
 COMMENT ON TABLE _migration_log IS 'Tracks data migration from empliq_dev (Oracle). Prisma manages app schema.';
 
 -- ==========================================
--- 6. Create empliq_pre_prod Database
+-- 6. Profile Trigger (auto-create profile on signup)
+--    GoTrue inserts into auth.users, this trigger
+--    creates matching profile in public.profiles.
+--    IMPORTANT: Columns must match Prisma schema exactly:
+--      - "name" (NOT "full_name")
+--      - "updated_at" is required (NOT NULL)
+--      - No "provider" column (removed from schema)
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+    INSERT INTO public.profiles (id, email, name, avatar_url, updated_at)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        NEW.raw_user_meta_data->>'full_name',
+        NEW.raw_user_meta_data->>'avatar_url',
+        NOW()
+    );
+    RETURN NEW;
+END;
+$function$;
+
+-- NOTE: The trigger ON auth.users is created AFTER GoTrue initializes.
+-- GoTrue creates auth.users on first boot (52 internal migrations).
+-- After GoTrue starts and creates auth.users, run:
+--   CREATE TRIGGER on_auth_user_created
+--     AFTER INSERT ON auth.users
+--     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- ==========================================
+-- 7. Create empliq_pre_prod Database
 --    Local dev environment uses this database.
 --    GoTrue + API both connect here for local dev.
 --    Prisma manages the public schema via `prisma db push`.
@@ -151,3 +185,22 @@ CREATE INDEX IF NOT EXISTS idx_migration_log_ruc ON _migration_log(ruc);
 CREATE INDEX IF NOT EXISTS idx_migration_log_status ON _migration_log(status);
 
 COMMENT ON TABLE _migration_log IS 'Tracks data migration from empliq_dev (Oracle). Prisma manages app schema.';
+
+-- Profile trigger for empliq_pre_prod (same function as main DB)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $function$
+BEGIN
+    INSERT INTO public.profiles (id, email, name, avatar_url, updated_at)
+    VALUES (
+        NEW.id,
+        NEW.email,
+        NEW.raw_user_meta_data->>'full_name',
+        NEW.raw_user_meta_data->>'avatar_url',
+        NOW()
+    );
+    RETURN NEW;
+END;
+$function$;
