@@ -1,0 +1,106 @@
+{
+  "name": "Empliq - Company Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "sync-01-trigger",
+      "name": "Every 4 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.empliq.io/api/companies/sync",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "5ae18999d0077fbe53971f6258acf88b079adeeea15e6f127199495196767543"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"mode\": \"delta\"}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "sync-02-request",
+      "name": "Delta Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        40,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\nconst created = result.created || 0;\nconst updated = result.updated || 0;\nconst unchanged = result.unchanged || 0;\nconst withLogos = result.withLogos || 0;\nconst duration = result.duration || 'unknown';\nconst errors = result.errors || 0;\n\nconst total = created + updated + unchanged;\n\nconsole.log(`🔄 Company Sync Complete`);\nconsole.log(`   Total: ${total} | New: ${created} | Updated: ${updated} | Unchanged: ${unchanged}`);\nconsole.log(`   Logos: ${withLogos} | Duration: ${duration} | Errors: ${errors}`);\n\nif (errors > 0) {\n  console.log(`⚠️ WARNING: ${errors} errors during sync`);\n}\n\nreturn {\n  json: {\n    summary: `Sync: ${created} new, ${updated} updated, ${unchanged} unchanged (${duration})`,\n    ...result\n  }\n};"
+      },
+      "id": "sync-03-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        280,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 4 Hours": {
+      "main": [
+        [
+          {
+            "node": "Delta Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delta Sync": {
+      "main": [
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "company-sync-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698"
+  },
+  "tags": []
+}
