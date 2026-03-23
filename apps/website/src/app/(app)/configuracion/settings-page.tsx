@@ -684,7 +684,7 @@ function AyudaSection() {
 
       <div className="max-w-md">
         <p className="text-xs text-muted-foreground">
-          Empliq v1.0 — Hecho con dedicación en Perú 🇵🇪
+          Empliq v1.0 — Made in Peru 🇵🇪
         </p>
       </div>
     </div>

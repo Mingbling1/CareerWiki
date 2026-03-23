@@ -74,11 +74,11 @@ export function AppFooter() {
             reservados.
           </p>
 
-          {/* Hecho con manos peruanas */}
+          {/* Made in Peru */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-stone-50 via-neutral-50 to-stone-100 shadow-sm border border-stone-200/50">
             <span className="text-sm leading-none">🇵🇪</span>
             <span className="text-xs font-semibold text-stone-700 tracking-wide">
-              Hecho con manos peruanas
+              Made in Peru
             </span>
           </div>
 

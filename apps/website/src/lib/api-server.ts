@@ -63,3 +63,20 @@ export async function getAllCompanySlugs(limit?: number): Promise<CompanySlug[]>
   const result = await fetchServer<CompanySlug[]>(`/companies/slugs${params}`)
   return result || []
 }
+
+/**
+ * Platform statistics for landing page and SEO structured data.
+ * Cached server-side (API caches for 1h, Next.js revalidates every 1h).
+ */
+export interface PlatformStats {
+  companies: number
+  reviews: number
+  salaries: number
+  benefits: number
+  positions: number
+  updatedAt: string
+}
+
+export async function getPlatformStats(): Promise<PlatformStats | null> {
+  return fetchServer<PlatformStats>("/stats")
+}

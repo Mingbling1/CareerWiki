@@ -248,7 +248,7 @@ export function Hero() {
                 ))}
               </div>
               <p className="text-sm text-neutral-700">
-                <span className="font-semibold text-neutral-900">24,000+</span> empresas &middot; datos reales de la comunidad
+                <span className="font-semibold text-neutral-900">85,000+</span> empresas &middot; datos reales de la comunidad
               </p>
             </motion.div>
           </motion.div>
@@ -278,7 +278,7 @@ export function Hero() {
                   {[
                     { label: 'Salario promedio', value: 'S/8,500' },
                     { label: 'Puestos activos', value: '2,340' },
-                    { label: 'Empresas', value: '24,223' },
+                    { label: 'Empresas', value: '85,455' },
                   ].map((stat, i) => (
                     <div key={i} className="bg-white rounded-xl p-3.5 border border-neutral-100 shadow-sm">
                       <p className="text-neutral-500 text-[10px] mb-1">{stat.label}</p>
