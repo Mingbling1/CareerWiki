@@ -28,6 +28,8 @@ interface CompanySEO {
 interface CompanySlug {
   slug: string
   updatedAt: string
+  employeeCount: number | null
+  hasLogo: boolean
 }
 
 async function fetchServer<T>(endpoint: string): Promise<T | null> {
