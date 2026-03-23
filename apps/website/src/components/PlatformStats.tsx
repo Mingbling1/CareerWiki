@@ -28,7 +28,7 @@ export function PlatformStats({ companies, reviews, salaries, benefits }: StatsP
   const values = { companies, reviews, salaries, benefits }
 
   return (
-    <section className="relative py-10 md:py-12">
+    <section className="relative py-10 md:py-12 bg-white">
       <div className="max-w-5xl mx-auto px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 16 }}
