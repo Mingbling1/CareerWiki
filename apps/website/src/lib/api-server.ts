@@ -54,10 +54,12 @@ export async function getCompanyForSEO(slug: string): Promise<CompanySEO | null>
 }
 
 /**
- * Fetch all company slugs for sitemap generation.
- * Uses dedicated /companies/slugs endpoint (no pagination cap).
+ * Fetch company slugs for sitemap generation.
+ * Uses dedicated /companies/slugs endpoint.
+ * Pass limit to only fetch the top N companies (ordered by employee count DESC).
  */
-export async function getAllCompanySlugs(): Promise<CompanySlug[]> {
-  const result = await fetchServer<CompanySlug[]>("/companies/slugs")
+export async function getAllCompanySlugs(limit?: number): Promise<CompanySlug[]> {
+  const params = limit ? `?limit=${limit}` : ""
+  const result = await fetchServer<CompanySlug[]>(`/companies/slugs${params}`)
   return result || []
 }

@@ -70,9 +70,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   // ── Empresas dinámicas ──
+  // Solo pedimos las top 25K (5K priority + 20K secondary)
+  // Las restantes ~60K se descubren via crawling orgánico
+  const TOTAL_LIMIT = PRIORITY_COUNT + SECONDARY_COUNT;
   let companies: Awaited<ReturnType<typeof getAllCompanySlugs>> = [];
   try {
-    companies = await getAllCompanySlugs();
+    companies = await getAllCompanySlugs(TOTAL_LIMIT);
   } catch {
     console.warn("sitemap: Could not fetch company slugs from API");
     return routes;
