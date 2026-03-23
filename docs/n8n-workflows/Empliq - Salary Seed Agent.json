@@ -1,0 +1,268 @@
+{
+  "name": "Empliq - Salary Seed Agent",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "sal-01-trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================\n// CONFIGURACION: Empresas a investigar\n// ============================================\n// Agrega slugs de empresas que existan en Empliq.\n// Usa api.empliq.io/api/companies?search=nombre para buscar slugs.\n//\n// Para ejecutar por lotes, cambia este array.\n\nconst companySlugs = [\n  'banco-de-credito-del-peru',\n  'interbank',\n  'bbva-peru',\n  'scotiabank-peru',\n  'rimac-seguros',\n  'telefonica-del-peru',\n  'alicorp',\n  'backus',\n  'southern-peru',\n  'minsur'\n];\n\nreturn companySlugs.map(slug => ({ json: { companySlug: slug } }));"
+      },
+      "id": "sal-02-companies",
+      "name": "Company Slugs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-360, 300]
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxIterations": 5
+        }
+      },
+      "id": "sal-03-agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [-80, 300]
+    },
+    {
+      "parameters": {
+        "modelId": "qwen/qwen3-4b:free",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 2048
+        },
+        "credentials": {
+          "openRouterApi": {
+            "apiKey": "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"
+          }
+        }
+      },
+      "id": "sal-03a-model",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [-200, 520],
+      "notes": "NOTA: En n8n, configura las credenciales de OpenRouter manualmente.\nAPI Key: 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\nModelo: qwen/qwen3-4b:free (o meta-llama/llama-3.2-3b-instruct:free)"
+    },
+    {
+      "parameters": {
+        "credentials": {
+          "tavilyApi": {
+            "apiKey": "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"
+          }
+        }
+      },
+      "id": "sal-03b-tavily",
+      "name": "Tavily",
+      "type": "@n8n/n8n-nodes-langchain.toolTavily",
+      "typeVersion": 1,
+      "position": [40, 520],
+      "notes": "NOTA: En n8n, configura las credenciales de Tavily manualmente.\nAPI Key: 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"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.companySlug }}",
+        "systemMessage": "Eres un investigador de salarios laborales en Peru. Tu tarea es buscar informacion real de salarios para una empresa peruana especifica.\n\nIMPORTANTE:\n- La empresa se identifica por su slug (ej: 'banco-de-credito-del-peru' = BCP)\n- Busca en fuentes como Glassdoor Peru, Indeed Peru, Computrabajo, Bumeran, LinkedIn\n- Busca salarios MENSUALES en SOLES (PEN)\n- Si encuentras salarios en dolares, conviertelos a soles (1 USD ≈ 3.75 PEN)\n- Incluye diferentes posiciones/cargos que encuentres\n- Seniority levels: junior, mid, senior, lead, manager, director\n\nPara cada salario encontrado, devuelve EXACTAMENTE este formato JSON:\n```json\n[\n  {\n    \"companySlug\": \"slug-de-la-empresa\",\n    \"positionTitle\": \"Nombre del Puesto\",\n    \"level\": \"junior|mid|senior|lead|manager|director\",\n    \"amount\": 5000,\n    \"currency\": \"PEN\",\n    \"period\": \"monthly\",\n    \"yearsExperience\": 3,\n    \"source\": \"glassdoor.com\"\n  }\n]\n```\n\nReglas:\n- amount debe ser un numero entero (sin decimales)\n- Solo incluye datos que parezcan reales y razonables para Peru\n- Si no encuentras datos de salario para una empresa, devuelve un array vacio: []\n- Devuelve SOLO el JSON, sin texto adicional antes o despues\n- Busca al menos 3-5 posiciones diferentes por empresa si es posible\n- Rango tipico de salarios en Peru: S/1025 (minimo) a S/50000+ (gerentes)\n- Posiciones comunes: Analista, Ejecutivo, Ingeniero, Gerente, Coordinador, Jefe, Asistente, Practicante"
+      },
+      "id": "sal-03c-prompt",
+      "name": "Agent Prompt",
+      "type": "@n8n/n8n-nodes-langchain.promptTemplate",
+      "typeVersion": 1,
+      "position": [-80, 520],
+      "notes": "Este prompt se inyecta en el AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Agent output into structured salary data\nconst agentOutput = $input.first().json.output || $input.first().json.text || '';\n\ntry {\n  // Extract JSON from the response (handle markdown code blocks)\n  let jsonStr = agentOutput;\n  \n  // Remove markdown code fences if present\n  const jsonMatch = jsonStr.match(/```(?:json)?\\s*([\\s\\S]*?)```/);\n  if (jsonMatch) {\n    jsonStr = jsonMatch[1].trim();\n  }\n  \n  // Try to find JSON array in the response\n  const arrayMatch = jsonStr.match(/\\[\\s*\\{[\\s\\S]*\\}\\s*\\]/);\n  if (arrayMatch) {\n    jsonStr = arrayMatch[0];\n  }\n  \n  const salaries = JSON.parse(jsonStr);\n  \n  if (!Array.isArray(salaries) || salaries.length === 0) {\n    console.log('No salaries found in AI response');\n    return { json: { salaries: [], count: 0, skipped: true } };\n  }\n  \n  // Validate and clean each salary\n  const validSalaries = salaries\n    .filter(s => s.companySlug && s.positionTitle && s.amount > 0)\n    .map(s => ({\n      companySlug: String(s.companySlug).trim(),\n      positionTitle: String(s.positionTitle).trim(),\n      level: s.level || undefined,\n      amount: Math.round(Number(s.amount)),\n      currency: s.currency || 'PEN',\n      period: s.period || 'monthly',\n      yearsExperience: s.yearsExperience ? Number(s.yearsExperience) : undefined,\n      source: s.source || 'ai-agent'\n    }));\n  \n  console.log(`Parsed ${validSalaries.length} valid salaries from AI response`);\n  \n  return { json: { salaries: validSalaries, count: validSalaries.length } };\n  \n} catch (err) {\n  console.error('Failed to parse AI response:', err.message);\n  console.log('Raw output:', agentOutput.substring(0, 500));\n  return { json: { salaries: [], count: 0, error: err.message } };\n}"
+      },
+      "id": "sal-04-parse",
+      "name": "Parse Salaries",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.count > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "sal-05-check",
+      "name": "Has Salaries?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.empliq.io/api/salaries/seed",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "5ae18999d0077fbe53971f6258acf88b079adeeea15e6f127199495196767543"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ salaries: $json.salaries }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "sal-06-seed",
+      "name": "Seed to API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $input.first().json;\n\nconst created = result.created || 0;\nconst errors = result.errors ? result.errors.length : 0;\nconst total = result.total || 0;\n\nconsole.log(`✅ Salary Seed Complete`);\nconsole.log(`   Total: ${total} | Created: ${created} | Errors: ${errors}`);\n\nif (result.errors && result.errors.length > 0) {\n  console.log('Errors:');\n  result.errors.forEach(e => console.log(`   [${e.index}] ${e.companySlug}/${e.positionTitle}: ${e.error}`));\n}\n\nreturn { json: { summary: `Seeded ${created}/${total} salaries (${errors} errors)`, ...result } };"
+      },
+      "id": "sal-07-log",
+      "name": "Log Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 240]
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log('⏭️ No salaries found for this company, skipping seed.');\nreturn { json: { skipped: true, message: 'No salary data found by AI agent' } };"
+      },
+      "id": "sal-08-skip",
+      "name": "Skip (No Data)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Company Slugs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Company Slugs": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Parse Salaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tavily": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Salaries": {
+      "main": [
+        [
+          {
+            "node": "Has Salaries?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Salaries?": {
+      "main": [
+        [
+          {
+            "node": "Seed to API",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip (No Data)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Seed to API": {
+      "main": [
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "salary-seed-agent-v1",
+  "meta": {
+    "templateCredsSetupCompleted": false,
+    "instanceId": "435d09e19799223d5205d0d5f2cc4ff5a56eaa292cca5c829f633c0f900d3698",
+    "notes": "## Empliq - Salary Seed Agent\n\n### Setup en n8n:\n1. Importar este JSON en n8n\n2. Configurar credenciales de OpenRouter (Settings > Credentials > OpenRouter):\n   - API Key: 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\n   - Base URL: https://openrouter.ai/api/v1\n3. Configurar credenciales de Tavily (Settings > Credentials > Tavily):\n   - API Key: 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\n4. Editar el nodo 'Company Slugs' para elegir que empresas investigar\n5. Ejecutar manualmente (boton Execute Workflow)\n\n### Flujo:\nManual Trigger → Company Slugs (lista) → AI Agent (busca salarios con Tavily) → Parse JSON → If tiene datos → POST /api/salaries/seed\n\n### Notas:\n- El agente usa un modelo gratuito de OpenRouter (qwen3-4b)\n- Tavily busca en Glassdoor, Indeed, Computrabajo, etc.\n- Max 5 iteraciones del agente por empresa\n- Max 100 salarios por request al API\n- Los salarios se crean bajo el perfil del sistema (00000000-0000-0000-0000-000000000000)\n- Ejecutar manualmente y revisar resultados antes de poner en schedule"
+  },
+  "tags": []
+}
