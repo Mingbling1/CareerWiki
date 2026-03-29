@@ -28,8 +28,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 14400;
 
 const BASE_URL = "https://empliq.io";
-const PRIORITY_COUNT = 5_000; // Top empresas con sub-páginas
-const SECONDARY_COUNT = 20_000; // Siguientes empresas (solo página principal)
+const PRIORITY_COUNT = 100; // Top empresas con sub-páginas (pre-render en build)
+const SECONDARY_COUNT = 400; // Siguientes empresas (solo página principal, ~500 total)
 const SUB_PAGES = ["/salarios", "/resenas", "/beneficios"];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

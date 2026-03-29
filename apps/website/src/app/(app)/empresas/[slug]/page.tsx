@@ -1,6 +1,11 @@
 import type { Metadata } from "next"
-import { getCompanyForSEO } from "@/lib/api-server"
+import { getCompanyForSEO, getAllCompanySlugs } from "@/lib/api-server"
 import { CompanyOverview } from "./company-overview"
+
+export async function generateStaticParams() {
+  const companies = await getAllCompanySlugs(200)
+  return companies.map((c) => ({ slug: c.slug }))
+}
 
 const SITE_URL = "https://empliq.io"
 
