@@ -3,7 +3,7 @@ import { getCompanyForSEO, getAllCompanySlugs } from "@/lib/api-server"
 import { CompanyOverview } from "./company-overview"
 
 export async function generateStaticParams() {
-  const companies = await getAllCompanySlugs(200)
+  const companies = await getAllCompanySlugs(300)
   return companies.map((c) => ({ slug: c.slug }))
 }
 
