@@ -5,6 +5,7 @@ import { PlatformStats } from '@/components/PlatformStats'
 import { IllustrationShowcase } from '@/components/IllustrationShowcase'
 import { UseCases } from '@/components/UseCases'
 import { Features } from '@/components/Features'
+import { AuthenticitySection } from '@/components/AuthenticitySection'
 // import { Testimonials } from '@/components/Testimonials' // TODO: Habilitar cuando tengamos testimonios reales
 // import { CTA } from '@/components/CTA' // TODO: Habilitar cuando tengamos mas datos
 import { Footer } from '@/components/Footer'
@@ -96,6 +97,7 @@ export default async function Home() {
         <IllustrationShowcase />
         <UseCases />
         <Features />
+        <AuthenticitySection />
         {/* <Testimonials /> TODO: Habilitar cuando tengamos testimonios reales */}
         {/* <CTA /> TODO: Habilitar cuando tengamos mas datos */}
       </main>

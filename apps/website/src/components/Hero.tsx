@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 // Importar Shader3 dinámicamente para evitar problemas de SSR con Three.js
 const Shader3 = dynamic(
@@ -311,54 +311,72 @@ export function Hero() {
                   </button>
                 </div>
 
-                {/* Tab content */}
-                {activeTab === 'salarios' ? (
-                  <div className="space-y-2">
-                    {MOCK_SALARIES.map((job, i) => (
-                      <div key={i} className="flex items-center gap-3 bg-white rounded-lg px-3.5 py-3 border border-neutral-100">
-                        <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
-                          <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-neutral-900 text-sm font-medium truncate">{job.title}</p>
-                          <p className="text-neutral-400 text-[10px]">{job.company} &middot; {job.reports} reportes</p>
-                        </div>
-                        <span className="text-neutral-900 font-mono text-sm font-bold shrink-0">{job.salary}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {MOCK_REVIEWS.map((review, i) => (
-                      <div key={i} className="bg-white rounded-lg p-3.5 border border-neutral-100">
-                        <div className="flex items-center gap-2.5 mb-2">
-                          <Image
-                            src={review.avatar}
-                            alt={review.nickname}
-                            width={28}
-                            height={28}
-                            className="rounded-full object-cover"
-                          />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-medium text-neutral-800 truncate">{review.nickname}</span>
-                              {review.badge && (
-                                <span className="text-[9px] bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded-full border border-neutral-200 shrink-0">
-                                  {review.badge}
-                                </span>
-                              )}
+                {/* Tab content - fixed height to prevent layout shift */}
+                <div className="min-h-[180px]">
+                  <AnimatePresence mode="wait">
+                    {activeTab === 'salarios' ? (
+                      <motion.div
+                        key="salarios"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="space-y-2"
+                      >
+                        {MOCK_SALARIES.map((job, i) => (
+                          <div key={i} className="flex items-center gap-3 bg-white rounded-lg px-3.5 py-3 border border-neutral-100">
+                            <div className="w-8 h-8 rounded-lg bg-neutral-100 flex items-center justify-center shrink-0">
+                              <svg className="w-4 h-4 text-neutral-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                              </svg>
                             </div>
-                            <StarRow rating={review.rating} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-neutral-900 text-sm font-medium truncate">{job.title}</p>
+                              <p className="text-neutral-400 text-[10px]">{job.company} &middot; {job.reports} reportes</p>
+                            </div>
+                            <span className="text-neutral-900 font-mono text-sm font-bold shrink-0">{job.salary}</span>
                           </div>
-                        </div>
-                        <p className="text-xs font-medium text-neutral-800 mb-0.5">{review.title}</p>
-                        <p className="text-[11px] text-neutral-500 leading-relaxed line-clamp-2">{review.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                        ))}
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="reseñas"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2, ease: 'easeOut' }}
+                        className="space-y-3"
+                      >
+                        {MOCK_REVIEWS.map((review, i) => (
+                          <div key={i} className="bg-white rounded-lg p-3.5 border border-neutral-100">
+                            <div className="flex items-center gap-2.5 mb-2">
+                              <Image
+                                src={review.avatar}
+                                alt={review.nickname}
+                                width={28}
+                                height={28}
+                                className="rounded-full object-cover"
+                              />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-neutral-800 truncate">{review.nickname}</span>
+                                  {review.badge && (
+                                    <span className="text-[9px] bg-neutral-100 text-neutral-500 px-1.5 py-0.5 rounded-full border border-neutral-200 shrink-0">
+                                      {review.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <StarRow rating={review.rating} />
+                              </div>
+                            </div>
+                            <p className="text-xs font-medium text-neutral-800 mb-0.5">{review.title}</p>
+                            <p className="text-[11px] text-neutral-500 leading-relaxed line-clamp-2">{review.body}</p>
+                          </div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </motion.div>
 
